@@ -55,9 +55,28 @@ FuBao is a Taoist talisman cultural e-commerce site targeting overseas markets. 
 │   ├── hooks/
 │   │   ├── use-cart.ts         # Cart state management (localStorage)
 │   │   └── use-mobile.ts       # Mobile detection
+│   ├── api/                    # REST API routes
+│   │   └── v2/storefront/      # Spree Commerce API v2 compatibility layer
+│   │       ├── products/       # GET list (filter[name]/filter[taxons]/page) + [slug]
+│   │       ├── taxons/         # GET category tree
+│   │       ├── vendors/        # GET multi-vendor list
+│   │       ├── cart/           # POST create (guest token) / add-item / set-quantity /
+│   │       │                   # remove-line-item / empty / apply-promo-code /
+│   │       │                   # estimate_shipping_rates / associate
+│   │       ├── checkout/       # next / advance / address / delivery / shipments /
+│   │       │                   # shipping_rates / payment / payment_methods /
+│   │       │                   # confirm / complete / order_status
+│   │       ├── spree_oauth/    # POST token (password grant)
+│   │       └── account/        # GET/PATCH profile / orders / orders/[number] /
+│   │                           # credit_cards / addresses
 │   └── lib/
 │       ├── api/
 │       │   └── index.ts        # Data access layer (swap for REST API later)
+│       ├── spree-compat/       # Spree contract layer
+│       │   ├── types.ts        # JSON:API response types (SpreeResource etc.)
+│       │   ├── serializers.ts  # Product/Taxon/Vendor JSON:API serializers
+│       │   ├── order-store.ts  # In-memory order state machine (globalThis)
+│       │   └── order-serializer.ts # Cart/Order JSON:API serializer
 │       ├── data/
 │       │   ├── types.ts        # TypeScript type definitions
 │       │   └── products.ts     # Mock product/review/verification data
@@ -74,6 +93,19 @@ FuBao is a Taoist talisman cultural e-commerce site targeting overseas markets. 
 - **Mock Data**: `src/lib/data/products.ts` — products, reviews, verification records
 - **API Layer**: `src/lib/api/index.ts` — all data access functions (getProducts, getProductBySlug, verifyCode, getQuizResult, submitOrder)
 - **Rule**: Pages import from `@/lib/api`, never directly from mock files
+
+## Spree Commerce v2 Compatibility Layer
+
+Implements the Spree 5.4 Storefront API contract so the official Spree Next.js
+storefront (or any Spree client) works out of the box. Swap `spree-compat/`
+stores with real `SPREE_API_URL` calls later — routes keep the same contract.
+
+- **Response format**: JSON:API `{data: [{id, type, attributes, relationships}], meta, links}`
+- **Auth**: `X-Spree-Order-Token` header for guest carts; `Authorization: Bearer <JWT>` (via `POST /spree_oauth/token`, password grant) for account endpoints
+- **Checkout state machine**: `cart → address → delivery → payment → confirm → complete`; step endpoints (address/delivery/payment) auto-advance once data is present; `confirm` mirrors Spree confirm→complete semantics; `complete` is idempotent
+- **Coupon engine**: `apply-promo-code` reuses `@/lib/coupons/coupon-store` (percentage / fixed / free_shipping types); totals recompute on every mutation
+- **State persistence**: `order-store.ts` keeps in-memory Maps on `globalThis` so all routes share state across module instances in dev
+- **Users**: reuses `@/lib/auth/user-store` (demo@fubao.com / demo123); JWT issued by `@/lib/auth/jwt`
 
 ## Design Tokens
 
