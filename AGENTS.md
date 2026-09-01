@@ -141,6 +141,7 @@ Defined in `src/app/globals.css` and `DESIGN.md`:
 - Server Components by default, `'use client'` only for interactivity
 - Cart state via `useCart` hook (server cart + Spree guest token in localStorage)
 - Category filtering via searchParams on `/talisman`; pills come from `getTaxons()` (Spree taxon tree, root "Categories" + 4 children); taxon names match `Product.category` values exactly
+- Product search via `?q=` searchParam on `/talisman` (`SearchBox` client component, `talisman/search-box.tsx`): matches product name/tagline/description case-insensitively, composes with `?category=`, "N results for 'query'" indicator + "View all talismans" reset link; empty state with curated suggestions when 0 hits. `getProducts({ search })` mirrors Spree `filter[name]` semantics
 - Five Elements quiz uses deterministic rules (same input = same output)
 - Verification uses mock codes (FB-2026-XXXXXX format)
 

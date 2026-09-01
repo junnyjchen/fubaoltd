@@ -150,9 +150,24 @@ export async function getWishes(): Promise<Wish[]> {
 import { spreeProductToListProduct, spreeProductToDetail } from "@/lib/spree/adapter";
 import { listSpreeProducts, getSpreeProductBySlug } from "@/lib/spree/queries";
 
-export async function getProducts(category?: string): Promise<Product[]> {
+function matchesQuery(product: Product, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return (
+    product.name.toLowerCase().includes(q) ||
+    product.tagline.toLowerCase().includes(q) ||
+    product.category.toLowerCase().includes(q)
+  );
+}
+
+export async function getProducts(
+  category?: string,
+  query?: string
+): Promise<Product[]> {
   const spreeProducts = await listSpreeProducts(category);
-  return spreeProducts.map(spreeProductToListProduct);
+  return spreeProducts
+    .map(spreeProductToListProduct)
+    .filter((p) => matchesQuery(p, query ?? ''));
 }
 
 export async function getFeaturedProducts(limit = 3): Promise<Product[]> {

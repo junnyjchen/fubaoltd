@@ -2,9 +2,10 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getProducts, getTaxons } from '@/lib/api';
 import type { ProductCategory } from '@/lib/data/types';
-import { Star } from 'lucide-react';
+import { Star, SearchX } from 'lucide-react';
 import { TalismanSVG, getTalismanVariant } from '@/components/shared/talisman-svg';
 import { RevealSection } from '@/components/shared/reveal-section';
+import { SearchBox } from './search-box';
 
 export const metadata: Metadata = {
   title: 'Talismans',
@@ -13,14 +14,15 @@ export const metadata: Metadata = {
 };
 
 interface Props {
-  searchParams: Promise<{ category?: string }>;
+  searchParams: Promise<{ category?: string; q?: string }>;
 }
 
 export default async function TalismanPage({ searchParams }: Props) {
   const params = await searchParams;
   const categoryFilter = params.category as ProductCategory | undefined;
+  const query = (params.q ?? '').trim();
   const [products, taxons] = await Promise.all([
-    getProducts(categoryFilter),
+    getProducts(categoryFilter, query || undefined),
     getTaxons(),
   ]);
 
@@ -54,6 +56,34 @@ export default async function TalismanPage({ searchParams }: Props) {
           </p>
         </div>
 
+        {/* Search */}
+        <div className="mb-8 flex justify-center">
+          <SearchBox />
+        </div>
+
+        {/* Result count / empty state */}
+        {query ? (
+          products.length > 0 ? (
+            <p className="mb-10 text-center text-xs tracking-wide text-smoke">
+              {products.length} result{products.length === 1 ? '' : 's'} for
+              &ldquo;{query}&rdquo;
+            </p>
+          ) : (
+            <div className="mb-10 flex flex-col items-center gap-3 border border-border bg-jade/50 px-8 py-12 text-center">
+              <SearchX className="h-6 w-6 text-smoke" strokeWidth={1.5} />
+              <p className="text-sm text-smoke">
+                No talismans found for &ldquo;{query}&rdquo;
+              </p>
+              <Link
+                href="/talisman"
+                className="text-xs tracking-wide text-cinnabar underline underline-offset-4 hover:text-ink"
+              >
+                Clear search
+              </Link>
+            </div>
+          )
+        ) : null}
+
         {/* Category Filter */}
         <div className="mb-12 flex flex-wrap justify-center gap-2">
           {categories.map((cat) => {
@@ -63,8 +93,12 @@ export default async function TalismanPage({ searchParams }: Props) {
                 : cat.value === categoryFilter;
             const href =
               cat.value === 'All'
-                ? '/talisman'
-                : `/talisman?category=${encodeURIComponent(cat.value)}`;
+                ? query
+                  ? `/talisman?q=${encodeURIComponent(query)}`
+                  : '/talisman'
+                : `/talisman?category=${encodeURIComponent(cat.value)}${
+                    query ? `&q=${encodeURIComponent(query)}` : ''
+                  }`;
             return (
               <Link
                 key={cat.value}
