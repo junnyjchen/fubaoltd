@@ -16,6 +16,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.958.0",
     "@aws-sdk/lib-storage": "^3.958.0",
+    "@formatjs/intl-localematcher": "^0.8.13",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -56,6 +57,7 @@
     "embla-carousel-react": "^8.6.0",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.468.0",
+    "negotiator": "^1.1.0",
     "next": "16.1.1",
     "next-themes": "^0.4.6",
     "pg": "^8.16.3",
@@ -66,6 +68,7 @@
     "react-resizable-panels": "^4.2.0",
     "recharts": "2.15.4",
     "sonner": "^2.0.7",
+    "stripe": "^22.6.0",
     "tailwind-merge": "^2.6.0",
     "tw-animate-css": "^1.4.0",
     "vaul": "^1.1.2",

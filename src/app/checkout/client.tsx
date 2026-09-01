@@ -47,7 +47,11 @@ export function CheckoutClient() {
     e.preventDefault();
     setLoading(true);
     try {
-      const order = await submitOrder(cartItems, form);
+      const order = await submitOrder({
+        items: cartItems,
+        shippingInfo: form,
+        email: form.email,
+      });
       setOrderId(order.id);
       clearCart();
     } catch {

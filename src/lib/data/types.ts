@@ -52,19 +52,28 @@ export interface ShippingAddress {
   country: string;
 }
 
+export interface OrderItem {
+  slug: string;
+  name: string;
+  price: number;
+  quantity: number;
+  imageKey?: string;
+}
+
 export interface Order {
   id: string;
-  items: Array<{
-    slug: string;
-    name: string;
-    price: number;
-    quantity: number;
-  }>;
+  items: OrderItem[];
   shipping: ShippingAddress;
+  subtotal: number;
+  shippingCost: number;
   total: number;
   status: 'confirmed' | 'processing' | 'shipped';
   createdAt: string;
 }
+
+// ─── Quiz Types (aliases) ───
+
+export type QuizInput = QuizAnswers;
 
 // ─── Verification Types ───
 
