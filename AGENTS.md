@@ -140,7 +140,7 @@ Defined in `src/app/globals.css` and `DESIGN.md`:
 
 - Server Components by default, `'use client'` only for interactivity
 - Cart state via `useCart` hook (server cart + Spree guest token in localStorage)
-- Category filtering via searchParams on `/talisman`
+- Category filtering via searchParams on `/talisman`; pills come from `getTaxons()` (Spree taxon tree, root "Categories" + 4 children); taxon names match `Product.category` values exactly
 - Five Elements quiz uses deterministic rules (same input = same output)
 - Verification uses mock codes (FB-2026-XXXXXX format)
 

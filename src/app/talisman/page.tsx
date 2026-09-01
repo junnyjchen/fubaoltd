@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { getProducts } from '@/lib/api';
+import { getProducts, getTaxons } from '@/lib/api';
 import type { ProductCategory } from '@/lib/data/types';
 import { Star } from 'lucide-react';
 import { TalismanSVG, getTalismanVariant } from '@/components/shared/talisman-svg';
@@ -12,14 +12,6 @@ export const metadata: Metadata = {
     'Browse our collection of hand-drawn Taoist talismans. Protection, home blessing, career success, and gift sets — each crafted by Master Chen in Hong Kong.',
 };
 
-const categories: Array<{ label: string; value: ProductCategory | 'All' }> = [
-  { label: 'All', value: 'All' },
-  { label: 'Protection', value: 'Protection' },
-  { label: 'Home Blessing', value: 'Home Blessing' },
-  { label: 'Career', value: 'Career' },
-  { label: 'Gift Sets', value: 'Gift Sets' },
-];
-
 interface Props {
   searchParams: Promise<{ category?: string }>;
 }
@@ -27,7 +19,22 @@ interface Props {
 export default async function TalismanPage({ searchParams }: Props) {
   const params = await searchParams;
   const categoryFilter = params.category as ProductCategory | undefined;
-  const products = await getProducts(categoryFilter);
+  const [products, taxons] = await Promise.all([
+    getProducts(categoryFilter),
+    getTaxons(),
+  ]);
+
+  // Build filter pills from the Spree taxon tree (root's children).
+  // The tree mirrors the storefront categories; "All" is a local pill.
+  const rootChildren =
+    taxons.find((t) => t.isRoot && t.parentId === null)?.children ?? [];
+  const categories: Array<{ label: string; value: ProductCategory | 'All' }> = [
+    { label: 'All', value: 'All' },
+    ...rootChildren.map((t) => ({
+      label: t.name,
+      value: t.name as ProductCategory,
+    })),
+  ];
 
   return (
     <div className="bg-paper py-16 sm:py-24">

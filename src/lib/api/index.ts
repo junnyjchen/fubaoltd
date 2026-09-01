@@ -1,4 +1,5 @@
 import { products, reviews, verificationRecords } from "@/lib/data/products";
+import { TAXON_TREE, vendorIdForProduct } from "@/lib/spree-compat/serializers";
 import type {
   Product,
   Review,
@@ -171,7 +172,6 @@ export async function getProductReviews(slug: string): Promise<Review[]> {
 // ============ Artisans (Spree vendors) ============
 
 import { merchants } from "@/lib/merchant/merchant-store";
-import { vendorIdForProduct } from "@/lib/spree-compat/serializers";
 import type { Artisan } from "@/lib/data/types";
 
 export async function getArtisans(): Promise<Artisan[]> {
@@ -492,4 +492,37 @@ export async function getProductImageUrls(keys: string[]): Promise<Record<string
   );
   
   return urls;
+}
+
+// ============ Taxons (Spree category tree) ============
+
+export interface TaxonNode {
+  id: string;
+  name: string;
+  permalink: string;
+  parentId: string | null;
+  isRoot: boolean;
+  children: TaxonNode[];
+}
+
+/**
+ * Spree taxon tree (root + category children), used by the /talisman
+ * category filter. Reads the in-process Spree compat layer.
+ */
+export function getTaxons(): TaxonNode[] {
+  const nodes: TaxonNode[] = TAXON_TREE.map((t) => ({
+    id: t.id,
+    name: t.name,
+    permalink: t.permalink,
+    parentId: t.parentId,
+    isRoot: t.parentId === null,
+    children: [],
+  }));
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  for (const node of nodes) {
+    if (node.parentId !== null) {
+      byId.get(node.parentId)?.children.push(node);
+    }
+  }
+  return nodes;
 }
