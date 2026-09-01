@@ -56,6 +56,7 @@
     "drizzle-zod": "^0.8.3",
     "embla-carousel-react": "^8.6.0",
     "input-otp": "^1.4.2",
+    "jose": "^6.2.10",
     "lucide-react": "^0.468.0",
     "negotiator": "^1.1.0",
     "next": "16.1.1",

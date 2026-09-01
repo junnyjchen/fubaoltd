@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { useCart } from '@/hooks/use-cart';
+import { useAuth } from '@/lib/auth/auth-context';
 import { useScrollPosition } from '@/hooks/use-scroll-reveal';
-import { ShoppingBag, Menu, X } from 'lucide-react';
+import { ShoppingBag, Menu, X, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 const navLinks = [
@@ -18,6 +19,7 @@ const navLinks = [
 
 export function Header() {
   const { totalItems } = useCart();
+  const { user } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const scrollY = useScrollPosition();
   const isScrolled = scrollY > 50;
@@ -72,8 +74,27 @@ export function Header() {
             ))}
           </nav>
 
-          {/* Cart + Mobile Toggle */}
+          {/* Cart + User + Mobile Toggle */}
           <div className="flex items-center gap-4">
+            {user ? (
+              <Link
+                href="/account"
+                className="relative text-ink transition-colors duration-300 hover:text-cinnabar"
+                aria-label="My account"
+              >
+                <User className="h-5 w-5" />
+                <span className="absolute -right-1 -top-1 flex h-3 w-3 items-center justify-center rounded-full bg-cinnabar text-[8px] text-white">
+                  {user.points > 0 ? '•' : ''}
+                </span>
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                className="text-xs tracking-[0.1em] text-smoke transition-colors duration-300 hover:text-ink"
+              >
+                Sign In
+              </Link>
+            )}
             <Link
               href="/cart"
               className="relative text-ink transition-colors duration-300 hover:text-cinnabar"

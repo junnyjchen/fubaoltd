@@ -1,22 +1,54 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
+import { createCryptoPayment } from "@/lib/crypto/payment-store";
+import { getSession } from "@/lib/auth/session";
+import type { CryptoNetwork, CryptoToken } from "@/lib/crypto/types";
 
 export const dynamic = "force-dynamic";
 
 // Initialize Stripe - uses test mode by default
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "sk_test_placeholder");
 
-// POST /api/checkout - Create a Stripe checkout session
+// POST /api/checkout - Create a checkout session (supports Stripe + Crypto)
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { items, email } = body;
+    const { items, email, paymentMethod = 'stripe', cryptoToken = 'USDT', cryptoNetwork = 'TRC20' } = body;
     
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
         { success: false, error: "Cart is empty" },
         { status: 400 }
       );
+    }
+
+    const total = items.reduce((sum: number, item: { price: number; quantity: number }) => sum + item.price * item.quantity, 0);
+    const orderId = `FB-ORD-${Date.now()}`;
+
+    // Crypto payment path
+    if (paymentMethod === 'crypto') {
+      const session = await getSession();
+      const userId = session?.sub || 'guest';
+      
+      const payment = createCryptoPayment(
+        orderId,
+        userId,
+        total,
+        cryptoToken as CryptoToken,
+        cryptoNetwork as CryptoNetwork
+      );
+
+      return NextResponse.json({
+        success: true,
+        paymentMethod: 'crypto',
+        data: {
+          orderId,
+          payment: {
+            ...payment,
+            timeRemaining: new Date(payment.expiresAt).getTime() - Date.now(),
+          },
+        },
+      });
     }
     
     // Check if Stripe is properly configured
