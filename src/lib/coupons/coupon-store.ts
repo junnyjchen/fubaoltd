@@ -1,8 +1,13 @@
 import type { Coupon, UserCoupon, CouponValidation } from './types';
 
-// In-memory stores
-const coupons: Map<string, Coupon> = new Map();
-const userCoupons: Map<string, UserCoupon[]> = new Map();
+// Stores persisted on globalThis so all route modules share one instance in dev
+// (mirrors order-store.ts). Seeds run only once per process.
+const globalStore = globalThis as unknown as {
+  __fubaoCoupons?: Map<string, Coupon>;
+  __fubaoUserCoupons?: Map<string, UserCoupon[]>;
+};
+const coupons: Map<string, Coupon> = (globalStore.__fubaoCoupons ??= new Map());
+const userCoupons: Map<string, UserCoupon[]> = (globalStore.__fubaoUserCoupons ??= new Map());
 
 // Seed demo coupons
 const demoCoupons: Coupon[] = [
@@ -28,7 +33,9 @@ const demoCoupons: Coupon[] = [
     isActive: true, createdAt: '2025-01-01',
   },
 ];
-demoCoupons.forEach(c => coupons.set(c.code, c));
+if (coupons.size === 0) {
+  demoCoupons.forEach(c => coupons.set(c.code, c));
+}
 
 export function validateCoupon(code: string, orderAmount: number, userId?: string, category?: string): CouponValidation {
   const coupon = coupons.get(code.toUpperCase());

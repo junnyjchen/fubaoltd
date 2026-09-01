@@ -2,8 +2,15 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { addPoints } from '@/lib/auth/user-store';
 
-// In-memory check-in store
-const checkIns: Map<string, { lastCheckIn: string; streak: number; totalDays: number }> = new Map();
+// Check-in store persisted on globalThis so state survives module re-instantiation in dev
+interface CheckInRecord {
+  lastCheckIn: string;
+  streak: number;
+  totalDays: number;
+}
+
+const globalStore = globalThis as unknown as { __fubaoCheckIns?: Map<string, CheckInRecord> };
+const checkIns: Map<string, CheckInRecord> = (globalStore.__fubaoCheckIns ??= new Map());
 
 const CHECKIN_REWARDS = [5, 5, 10, 10, 15, 15, 30]; // Points per day in a week cycle
 

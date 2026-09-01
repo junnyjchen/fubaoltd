@@ -1,7 +1,9 @@
 import type { Giveaway, GiveawayWinner } from './types';
 
-// In-memory store
-const giveaways: Map<string, Giveaway> = new Map();
+// Store persisted on globalThis so all route modules share one instance in dev.
+// Seeds run only once per process (empty map on first load).
+const globalStore = globalThis as unknown as { __fubaoGiveaways?: Map<string, Giveaway> };
+const giveaways: Map<string, Giveaway> = (globalStore.__fubaoGiveaways ??= new Map());
 
 // Seed demo giveaways
 const demoGiveaways: Giveaway[] = [
@@ -38,7 +40,9 @@ const demoGiveaways: Giveaway[] = [
     createdAt: '2025-01-01',
   },
 ];
-demoGiveaways.forEach(g => giveaways.set(g.id, g));
+if (giveaways.size === 0) {
+  demoGiveaways.forEach(g => giveaways.set(g.id, g));
+}
 
 export function getActiveGiveaways(): Giveaway[] {
   return Array.from(giveaways.values()).filter(g => g.status === 'active');

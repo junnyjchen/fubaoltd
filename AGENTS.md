@@ -145,6 +145,18 @@ Defined in `src/app/globals.css` and `DESIGN.md`:
 - Five Elements quiz uses deterministic rules (same input = same output)
 - Verification uses mock codes (FB-2026-XXXXXX format)
 - AI Assistant (`/ai-chat`): SSE streaming (`/api/ai/chat`), model selector from `/api/ai/models` (doubao-seed/lite/pro), markdown rendering (react-markdown + remark-gfm), RAG over knowledge base (`usedKnowledge` meta frame after content frames, `data: [DONE]` terminator). System prompt injects the live product catalog via `getProducts()` so answers link real slugs (`[Protection Talisman](/talisman/protection-talisman)`); compliance rules enforced (no supernatural claims, "For entertainment purposes only"). Client controls: stop generation (AbortController), copy message, regenerate last answer, clear chat. Abort-safe stream: controller closed after cancel → enqueue guarded by try/catch
+- Daily check-in (`/account` card): `GET /api/user/checkin` returns `{canCheckIn, streak, totalDays, lastCheckIn, nextReward}` (nextReward = points for the NEXT check-in); `POST` awards points from the weekly cycle `CHECKIN_REWARDS = [5,5,10,10,15,15,30]` and returns `{streak, pointsEarned, message}`; duplicate same-day POST → 400 "Already checked in today". The client (`account/client.tsx`) mirrors the reward table for the 7-Day Rewards strip (completed days in cycle = `canCheckIn ? streak % 7 : ((streak - 1) % 7) + 1`) and shows a level progress bar. Level thresholds live in `user-store.ts addPoints` (silver ≥ 500, gold ≥ 2000, platinum ≥ 5000) — client `LEVELS` array must mirror them exactly. New users start with 100 points (welcome bonus)
+
+## In-Memory Store Persistence Rule (CRITICAL)
+
+All in-memory stores **MUST** persist their state on `globalThis` — in dev, each route module can be re-instantiated, so module-scoped state is NOT shared across routes (symptom: register succeeds but login can't find the user). Canonical pattern:
+
+```ts
+const globalStore = globalThis as unknown as { __fubaoX?: Map<K, V> };
+const store: Map<K, V> = (globalStore.__fubaoX ??= new Map());
+```
+
+Stores already on globalThis: `spree-compat/order-store`, `auth/user-store` (seed-once guard `__fubaoUsersSeeded`), `coupons/coupon-store` (seeds when empty), `distribution/distribution-store`, `giveaways/giveaway-store` (seeds when empty), `notifications/notification-store` (seed-once via `has()` check), `crypto/payment-store` (demo wallet seeded via `has()` check), `api/user/checkin` route (`__fubaoCheckIns`), and the legacy orders array in `lib/api/index.ts` (`__fubaoLegacyOrders`). `merchant/merchant-store` is a read-only seed array (no mutation APIs) — safe as-is. When adding a new store, follow the same pattern and seed idempotently (guard with a flag or `size === 0` check so re-instantiation never wipes runtime writes).
 
 ## Known Auth Patterns (Important)
 

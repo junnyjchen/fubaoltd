@@ -1,6 +1,9 @@
 import type { Notification } from './types';
 
-const notifications: Map<string, Notification[]> = new Map();
+// Store persisted on globalThis so all route modules share one instance in dev.
+// Seeds run only once per process.
+const globalStore = globalThis as unknown as { __fubaoNotifications?: Map<string, Notification[]> };
+const notifications: Map<string, Notification[]> = (globalStore.__fubaoNotifications ??= new Map());
 
 // Seed demo notifications
 const demoNotifications: Notification[] = [
@@ -8,10 +11,12 @@ const demoNotifications: Notification[] = [
   { id: 'n-002', userId: 'usr-demo-001', type: 'promotion', title: 'Spring Sale!', message: 'Get 20% off with code VIP20. Valid for Gift Sets.', link: '/talisman?category=Gift+Sets', read: false, createdAt: '2025-03-05T14:00:00Z' },
   { id: 'n-003', userId: 'usr-demo-001', type: 'system', title: 'Welcome to FuBao!', message: 'Thank you for joining our community. Explore our hand-drawn talismans.', read: true, createdAt: '2025-01-01T00:00:00Z' },
 ];
-demoNotifications.forEach(n => {
-  if (!notifications.has(n.userId)) notifications.set(n.userId, []);
-  notifications.get(n.userId)!.push(n);
-});
+if (!notifications.has('usr-demo-001')) {
+  demoNotifications.forEach(n => {
+    if (!notifications.has(n.userId)) notifications.set(n.userId, []);
+    notifications.get(n.userId)!.push(n);
+  });
+}
 
 export function getUserNotifications(userId: string, unreadOnly = false): Notification[] {
   const list = notifications.get(userId) || [];

@@ -1,14 +1,20 @@
 import type { AffiliateLink, Commission, DistributionConfig } from './types';
 import { DEFAULT_CONFIG } from './types';
 
-// In-memory stores
-const affiliateLinks: Map<string, AffiliateLink> = new Map();
-const commissions: Map<string, Commission> = new Map();
-let config: DistributionConfig = { ...DEFAULT_CONFIG };
+// Stores persisted on globalThis so all route modules share one instance in dev
+const globalStore = globalThis as unknown as {
+  __fubaoAffiliateLinks?: Map<string, AffiliateLink>;
+  __fubaoCommissions?: Map<string, Commission>;
+  __fubaoDistributionConfig?: DistributionConfig;
+};
+const affiliateLinks: Map<string, AffiliateLink> = (globalStore.__fubaoAffiliateLinks ??= new Map());
+const commissions: Map<string, Commission> = (globalStore.__fubaoCommissions ??= new Map());
+let config: DistributionConfig = (globalStore.__fubaoDistributionConfig ??= { ...DEFAULT_CONFIG });
 
 export function getConfig(): DistributionConfig { return config; }
 export function updateConfig(updates: Partial<DistributionConfig>): DistributionConfig {
   config = { ...config, ...updates };
+  globalStore.__fubaoDistributionConfig = config;
   return config;
 }
 

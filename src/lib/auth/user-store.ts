@@ -1,83 +1,94 @@
 import type { User } from './types';
 import { hashPassword, verifyPassword, generateId, generateReferralCode } from './jwt';
 
-// In-memory user store (replace with database in production)
-const users: Map<string, User & { passwordHash: string }> = new Map();
+type StoredUser = User & { passwordHash: string };
 
-// Seed a demo user
-const demoPasswordHash = await hashPassword('demo123');
-users.set('demo@fubao.com', {
-  id: 'usr-demo-001',
-  email: 'demo@fubao.com',
-  name: 'Demo User',
-  role: 'customer',
-  status: 'active',
-  emailVerified: true,
-  createdAt: '2025-01-01T00:00:00Z',
-  updatedAt: '2025-01-01T00:00:00Z',
-  points: 500,
-  level: 'silver',
-  referralCode: 'FBDEMO01',
-  walletBalance: 0,
-  walletCurrency: 'USD',
-  passwordHash: demoPasswordHash,
-});
+// Persist the user store on globalThis so all route modules share one instance
+// in dev (mirrors order-store.ts). Seeding runs only once per process.
+const globalStore = globalThis as unknown as {
+  __fubaoUsers?: Map<string, StoredUser>;
+  __fubaoUsersSeeded?: boolean;
+};
+const users: Map<string, StoredUser> = (globalStore.__fubaoUsers ??= new Map());
 
-// Seed demo merchant accounts (linked to merchant-store records)
-const merchantHash = await hashPassword('merchant123');
-users.set('merchant@fubao.com', {
-  id: 'usr-merchant-001',
-  email: 'merchant@fubao.com',
-  name: 'Qingyun Temple Crafts',
-  role: 'merchant',
-  status: 'active',
-  emailVerified: true,
-  createdAt: '2024-05-01T00:00:00Z',
-  updatedAt: '2024-05-01T00:00:00Z',
-  points: 0,
-  level: 'bronze',
-  referralCode: 'FBMCH001',
-  walletBalance: 0,
-  walletCurrency: 'USD',
-  passwordHash: merchantHash,
-});
+if (!globalStore.__fubaoUsersSeeded) {
+  globalStore.__fubaoUsersSeeded = true;
 
-const craftsmanHash = await hashPassword('craft123');
-users.set('craftsman@fubao.com', {
-  id: 'usr-merchant-002',
-  email: 'craftsman@fubao.com',
-  name: 'Li Family Talisman Workshop',
-  role: 'merchant',
-  status: 'active',
-  emailVerified: true,
-  createdAt: '2024-08-15T00:00:00Z',
-  updatedAt: '2024-08-15T00:00:00Z',
-  points: 0,
-  level: 'bronze',
-  referralCode: 'FBMCH002',
-  walletBalance: 0,
-  walletCurrency: 'USD',
-  passwordHash: craftsmanHash,
-});
+  // Seed a demo user
+  const demoPasswordHash = await hashPassword('demo123');
+  users.set('demo@fubao.com', {
+    id: 'usr-demo-001',
+    email: 'demo@fubao.com',
+    name: 'Demo User',
+    role: 'customer',
+    status: 'active',
+    emailVerified: true,
+    createdAt: '2025-01-01T00:00:00Z',
+    updatedAt: '2025-01-01T00:00:00Z',
+    points: 500,
+    level: 'silver',
+    referralCode: 'FBDEMO01',
+    walletBalance: 0,
+    walletCurrency: 'USD',
+    passwordHash: demoPasswordHash,
+  });
 
-// Seed demo admin account
-const adminHash = await hashPassword('admin123');
-users.set('admin@fubao.com', {
-  id: 'usr-admin-001',
-  email: 'admin@fubao.com',
-  name: 'FuBao Admin',
-  role: 'admin',
-  status: 'active',
-  emailVerified: true,
-  createdAt: '2024-01-01T00:00:00Z',
-  updatedAt: '2024-01-01T00:00:00Z',
-  points: 0,
-  level: 'bronze',
-  referralCode: 'FBADM001',
-  walletBalance: 0,
-  walletCurrency: 'USD',
-  passwordHash: adminHash,
-});
+  // Seed demo merchant accounts (linked to merchant-store records)
+  const merchantHash = await hashPassword('merchant123');
+  users.set('merchant@fubao.com', {
+    id: 'usr-merchant-001',
+    email: 'merchant@fubao.com',
+    name: 'Qingyun Temple Crafts',
+    role: 'merchant',
+    status: 'active',
+    emailVerified: true,
+    createdAt: '2024-05-01T00:00:00Z',
+    updatedAt: '2024-05-01T00:00:00Z',
+    points: 0,
+    level: 'bronze',
+    referralCode: 'FBMCH001',
+    walletBalance: 0,
+    walletCurrency: 'USD',
+    passwordHash: merchantHash,
+  });
+
+  const craftsmanHash = await hashPassword('craft123');
+  users.set('craftsman@fubao.com', {
+    id: 'usr-merchant-002',
+    email: 'craftsman@fubao.com',
+    name: 'Li Family Talisman Workshop',
+    role: 'merchant',
+    status: 'active',
+    emailVerified: true,
+    createdAt: '2024-08-15T00:00:00Z',
+    updatedAt: '2024-08-15T00:00:00Z',
+    points: 0,
+    level: 'bronze',
+    referralCode: 'FBMCH002',
+    walletBalance: 0,
+    walletCurrency: 'USD',
+    passwordHash: craftsmanHash,
+  });
+
+  // Seed demo admin account
+  const adminHash = await hashPassword('admin123');
+  users.set('admin@fubao.com', {
+    id: 'usr-admin-001',
+    email: 'admin@fubao.com',
+    name: 'FuBao Admin',
+    role: 'admin',
+    status: 'active',
+    emailVerified: true,
+    createdAt: '2024-01-01T00:00:00Z',
+    updatedAt: '2024-01-01T00:00:00Z',
+    points: 0,
+    level: 'bronze',
+    referralCode: 'FBADM001',
+    walletBalance: 0,
+    walletCurrency: 'USD',
+    passwordHash: adminHash,
+  });
+}
 
 export async function createUser(
   email: string,

@@ -4,7 +4,7 @@ import { useAuth } from '@/lib/auth/auth-context';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Copy, Check, PackageOpen } from 'lucide-react';
+import { Copy, Check, PackageOpen, Flame } from 'lucide-react';
 
 interface AccountOrder {
   id: string;
@@ -15,6 +15,25 @@ interface AccountOrder {
   total: number;
   createdAt: string;
 }
+
+interface CheckInState {
+  canCheckIn: boolean;
+  streak: number;
+  totalDays: number;
+  lastCheckIn: string | null;
+  nextReward: number;
+}
+
+// Mirrors the server-side check-in cycle (points per day in a week cycle)
+const CHECKIN_REWARDS = [5, 5, 10, 10, 15, 15, 30];
+
+// Mirrors server-side level thresholds (user-store.ts addPoints)
+const LEVELS: { name: string; points: number }[] = [
+  { name: 'Bronze', points: 0 },
+  { name: 'Silver', points: 500 },
+  { name: 'Gold', points: 2000 },
+  { name: 'Platinum', points: 5000 },
+];
 
 const stateColors: Record<string, string> = {
   complete: 'text-emerald-600',
@@ -28,10 +47,22 @@ const stateColors: Record<string, string> = {
 };
 
 export function AccountPageClient() {
-  const { user, isLoading, logout } = useAuth();
+  const { user, isLoading, logout, refreshUser } = useAuth();
   const router = useRouter();
   const [orders, setOrders] = useState<AccountOrder[] | null>(null);
   const [copied, setCopied] = useState(false);
+  const [checkIn, setCheckIn] = useState<CheckInState | null>(null);
+  const [checkingIn, setCheckingIn] = useState(false);
+  const [checkInMsg, setCheckInMsg] = useState<string | null>(null);
+
+  const currentLevel = user
+    ? [...LEVELS].reverse().find((l) => user.points >= l.points) ?? LEVELS[0]
+    : LEVELS[0];
+  const nextLevel = user ? LEVELS.find((l) => l.points > user.points) : undefined;
+  const levelProgress =
+    user && nextLevel
+      ? (user.points - currentLevel.points) / (nextLevel.points - currentLevel.points)
+      : 1;
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -69,6 +100,50 @@ export function AccountPageClient() {
       cancelled = true;
     };
   }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    fetch('/api/user/checkin')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json: { data?: CheckInState } | null) => {
+        if (cancelled) return;
+        if (json?.data) setCheckIn(json.data);
+      })
+      .catch(() => {
+        /* check-in state unavailable */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  const doCheckIn = async () => {
+    if (!user || checkingIn || checkIn?.canCheckIn === false) return;
+    setCheckingIn(true);
+    setCheckInMsg(null);
+    try {
+      const res = await fetch('/api/user/checkin', { method: 'POST' });
+      const json = (await res.json()) as {
+        success: boolean;
+        data?: { streak: number; pointsEarned: number; message: string };
+        error?: string;
+      };
+      if (res.ok && json.success && json.data) {
+        setCheckInMsg(json.data.message);
+        void refreshUser();
+        const status = await fetch('/api/user/checkin');
+        const statusJson = (await status.json()) as { success: boolean; data?: CheckInState };
+        if (statusJson.success && statusJson.data) setCheckIn(statusJson.data);
+      } else {
+        setCheckInMsg(json.error ?? 'Check-in failed');
+      }
+    } catch {
+      setCheckInMsg('Check-in failed');
+    } finally {
+      setCheckingIn(false);
+    }
+  };
 
   const copyReferral = async () => {
     if (!user) return;
@@ -134,7 +209,82 @@ export function AccountPageClient() {
           </div>
           <div className="text-3xl font-bold text-foreground mt-2">{user.points}</div>
           <div className="text-sm text-muted-foreground">Points</div>
+          {nextLevel && (
+            <div className="mt-4">
+              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary rounded-full transition-all duration-700"
+                  style={{ width: `${Math.min(100, Math.round(levelProgress * 100))}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                {nextLevel.points - user.points} more points to {nextLevel.name}
+              </p>
+            </div>
+          )}
         </div>
+      </div>
+
+      {/* Daily Check-in */}
+      <div className="bg-card border border-border rounded-lg p-6 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 className="font-serif text-xl text-foreground mb-1">Daily Check-in</h2>
+            <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+              {checkIn !== null && (
+                <Flame className={`h-4 w-4 ${checkIn.streak > 0 ? 'text-primary' : 'text-muted-foreground/40'}`} />
+              )}
+              <span>
+                {checkIn === null
+                  ? 'Loading check-in status...'
+                  : `Current streak: ${checkIn.streak} day${checkIn.streak === 1 ? '' : 's'} · Next reward: +${checkIn.nextReward} points`}
+              </span>
+            </p>
+          </div>
+          <div className="flex flex-col items-start sm:items-end gap-2">
+            <button
+              type="button"
+              onClick={doCheckIn}
+              disabled={checkingIn || checkIn === null || checkIn.canCheckIn === false}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-md text-sm font-medium transition-colors hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {checkingIn ? 'Checking in...' : checkIn?.canCheckIn === false ? 'Checked in today' : 'Check in'}
+            </button>
+            {checkInMsg && <p className="text-xs text-muted-foreground">{checkInMsg}</p>}
+          </div>
+        </div>
+        {checkIn !== null && (
+          <div className="mt-5 pt-5 border-t border-border">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground mb-3">7-Day Rewards</p>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {CHECKIN_REWARDS.map((r, i) => {
+                // Days already claimed in the current week cycle:
+                // - can check in now: previous cycle days (streak % 7; 7 means full week -> new cycle)
+                // - already checked in today: includes today ((streak - 1) % 7) + 1
+                const done = checkIn.canCheckIn ? checkIn.streak % 7 : ((checkIn.streak - 1) % 7) + 1;
+                const isNext = checkIn.canCheckIn && i === done % 7;
+                return (
+                  <div
+                    key={i}
+                    className={`flex-shrink-0 w-12 h-14 rounded-md border flex flex-col items-center justify-center text-xs ${
+                      i < done
+                        ? 'bg-primary/10 border-primary/40 text-primary'
+                        : isNext
+                          ? 'border-primary bg-background text-foreground ring-1 ring-primary/30'
+                          : 'bg-muted/50 border-border text-muted-foreground'
+                    }`}
+                  >
+                    <span className="font-semibold">+{r}</span>
+                    <span className="text-[10px]">Day {i + 1}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              Total check-ins: {checkIn.totalDays} day{checkIn.totalDays === 1 ? '' : 's'}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Quick Stats */}

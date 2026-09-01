@@ -2,12 +2,19 @@ import type { CryptoPayment, CryptoNetwork, CryptoToken, WalletBalance } from '.
 import { generatePaymentId } from './validation';
 import { NETWORK_CONFIG, MERCHANT_ADDRESSES } from './types';
 
-// In-memory stores (replace with database in production)
-const payments: Map<string, CryptoPayment> = new Map();
-const walletBalances: Map<string, WalletBalance> = new Map();
+// Stores persisted on globalThis so all route modules share one instance in dev
+// (mirrors order-store.ts). Demo wallet seeded only once per process.
+const globalStore = globalThis as unknown as {
+  __fubaoPayments?: Map<string, CryptoPayment>;
+  __fubaoWalletBalances?: Map<string, WalletBalance>;
+};
+const payments: Map<string, CryptoPayment> = (globalStore.__fubaoPayments ??= new Map());
+const walletBalances: Map<string, WalletBalance> = (globalStore.__fubaoWalletBalances ??= new Map());
 
 // Initialize demo wallet
-walletBalances.set('usr-demo-001', { USD: 0, USDT: 50, USDC: 25 });
+if (!walletBalances.has('usr-demo-001')) {
+  walletBalances.set('usr-demo-001', { USD: 0, USDT: 50, USDC: 25 });
+}
 
 export function getWalletBalance(userId: string): WalletBalance {
   return walletBalances.get(userId) || { USD: 0, USDT: 0, USDC: 0 };

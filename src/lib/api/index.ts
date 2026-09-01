@@ -358,7 +358,10 @@ export async function getQuizResult(input: QuizInput): Promise<QuizResult> {
 
 // ============ Orders ============
 
-const orders: Order[] = [];
+// Persisted on globalThis so the legacy /api/orders route shares state across
+// module re-instantiation in dev (mirrors order-store.ts)
+const globalOrders = globalThis as unknown as { __fubaoLegacyOrders?: Order[] };
+const orders: Order[] = (globalOrders.__fubaoLegacyOrders ??= []);
 
 export async function submitOrder(input: {
   items: OrderItem[];
