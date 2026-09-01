@@ -11,6 +11,137 @@ import type {
   FiveElement,
 } from "@/lib/data/types";
 
+// ============ Articles ============
+
+interface Article {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  content: string;
+  category: "news" | "encyclopedia" | "tutorial" | "culture";
+  tags: string[];
+  author: string;
+  coverImage?: string;
+  published: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Mock articles for server-side rendering
+const mockArticles: Article[] = [
+  {
+    id: "art-001",
+    slug: "history-of-taoist-talismans",
+    title: "The Ancient History of Taoist Talismans",
+    excerpt: "Explore the 2000-year tradition of Taoist talisman creation and its significance in Chinese spiritual culture.",
+    content: "# The Ancient History of Taoist Talismans\n\nTaoist talismans, known as \"Fu\" (符) in Chinese, represent one of the most fascinating aspects of Eastern spiritual tradition.",
+    category: "encyclopedia",
+    tags: ["history", "talisman", "culture"],
+    author: "Master Chen",
+    published: true,
+    createdAt: "2025-01-15T10:00:00Z",
+    updatedAt: "2025-01-15T10:00:00Z",
+  },
+  {
+    id: "art-002",
+    slug: "five-elements-guide",
+    title: "Understanding the Five Elements (Wu Xing)",
+    excerpt: "A comprehensive guide to Metal, Wood, Water, Fire, and Earth—the fundamental forces in Taoist philosophy.",
+    content: "# Understanding the Five Elements (Wu Xing)\n\nThe Five Elements theory is a fundamental concept in Taoist philosophy.",
+    category: "encyclopedia",
+    tags: ["five elements", "wu xing", "philosophy"],
+    author: "Master Chen",
+    published: true,
+    createdAt: "2025-01-20T14:00:00Z",
+    updatedAt: "2025-01-20T14:00:00Z",
+  },
+  {
+    id: "art-003",
+    slug: "consecration-ritual-explained",
+    title: "The Consecration Ritual: A Step-by-Step Guide",
+    excerpt: "Learn about the sacred seven-step process that transforms a hand-drawn talisman into a blessed cultural artifact.",
+    content: "# The Consecration Ritual\n\nEvery FuBao talisman undergoes a traditional seven-step consecration ritual.",
+    category: "tutorial",
+    tags: ["ritual", "consecration", "process"],
+    author: "Master Chen",
+    published: true,
+    createdAt: "2025-02-01T09:00:00Z",
+    updatedAt: "2025-02-01T09:00:00Z",
+  },
+  {
+    id: "art-004",
+    slug: "new-spring-collection-2025",
+    title: "Spring 2025 Collection: Renewal and Growth",
+    excerpt: "Introducing our new Wood element talismans, designed for the season of renewal and fresh beginnings.",
+    content: "# Spring 2025 Collection\n\nAs spring approaches, we're excited to introduce our seasonal collection.",
+    category: "news",
+    tags: ["spring", "collection", "wood element"],
+    author: "FuBao Team",
+    published: true,
+    createdAt: "2025-02-10T11:00:00Z",
+    updatedAt: "2025-02-10T11:00:00Z",
+  },
+];
+
+export async function getArticles(category?: string): Promise<Article[]> {
+  let filtered = mockArticles.filter((a) => a.published);
+  if (category) {
+    filtered = filtered.filter((a) => a.category === category);
+  }
+  return filtered.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+}
+
+export async function getArticleBySlug(slug: string): Promise<Article | null> {
+  return mockArticles.find((a) => a.slug === slug && a.published) || null;
+}
+
+// ============ Wishes ============
+
+interface Wish {
+  id: string;
+  userName: string;
+  productName: string;
+  content: string;
+  rating: number;
+  createdAt: string;
+}
+
+const mockWishes: Wish[] = [
+  {
+    id: "wish-001",
+    userName: "Sarah M.",
+    productName: "Protection Talisman",
+    content: "I've been carrying this talisman for three months now. While I don't believe in supernatural powers, it serves as a beautiful reminder of my trip to Hong Kong and the incredible craftsmanship of Taoist art.",
+    rating: 5,
+    createdAt: "2025-02-15T10:00:00Z",
+  },
+  {
+    id: "wish-002",
+    userName: "Michael L.",
+    productName: "Home Blessing Talisman",
+    content: "Bought this as a housewarming gift for my parents. They loved the cultural significance and the beautiful presentation.",
+    rating: 5,
+    createdAt: "2025-02-10T14:30:00Z",
+  },
+  {
+    id: "wish-003",
+    userName: "Emily C.",
+    productName: "Energy Blessing Box",
+    content: "The gift set exceeded my expectations! The cultural handbook was incredibly informative, and the copper coin pendant is now my favorite accessory.",
+    rating: 4,
+    createdAt: "2025-02-05T09:15:00Z",
+  },
+];
+
+export async function getWishes(): Promise<Wish[]> {
+  return mockWishes.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+}
+
 // ============ Products ============
 
 export async function getProducts(category?: string): Promise<Product[]> {

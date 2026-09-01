@@ -9,9 +9,11 @@ import { useState, useEffect } from 'react';
 const navLinks = [
   { href: '/talisman', label: 'Talismans' },
   { href: '/elements-quiz', label: 'Five Elements' },
+  { href: '/ai-chat', label: 'AI Assistant' },
+  { href: '/articles', label: 'Culture' },
+  { href: '/wishes', label: 'Wishes' },
   { href: '/verify', label: 'Verify' },
   { href: '/about', label: 'About' },
-  { href: '/faq', label: 'FAQ' },
 ];
 
 export function Header() {
