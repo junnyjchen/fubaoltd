@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { Check, Copy, RotateCcw, Square } from "lucide-react";
 
 interface Message {
   role: "user" | "assistant";
@@ -15,15 +18,52 @@ interface Model {
   default: boolean;
 }
 
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard unavailable — ignore
+    }
+  };
+
+  return (
+    <button
+      onClick={copy}
+      className="p-1.5 rounded text-[var(--smoke)] hover:text-[var(--ink)] hover:bg-[var(--jade)] transition-colors"
+      title="Copy message"
+    >
+      {copied ? (
+        <Check className="w-3.5 h-3.5 text-[var(--gold)]" />
+      ) : (
+        <Copy className="w-3.5 h-3.5" />
+      )}
+    </button>
+  );
+}
+
+/** Typing cursor shown at the end of a streaming assistant message */
+function StreamingCursor() {
+  return (
+    <span className="inline-block w-[2px] h-[1em] align-text-bottom bg-[var(--cinnabar)] animate-pulse ml-0.5" />
+  );
+}
+
 export function AIChatClient() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [selectedModel, setSelectedModel] = useState("doubao-seed-2-0-mini-260215");
   const [models, setModels] = useState<Model[]>([]);
   const [showModelSelect, setShowModelSelect] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   // Fetch available models
   useEffect(() => {
@@ -54,48 +94,50 @@ export function AIChatClient() {
     }
   }, [input]);
 
-  const sendMessage = useCallback(async () => {
-    if (!input.trim() || isLoading) return;
+  /** Core streaming request. Returns the full assistant text. */
+  const runStream = useCallback(
+    async (history: Message[]): Promise<string> => {
+      const abortController = new AbortController();
+      abortRef.current = abortController;
+      setIsStreaming(true);
 
-    const userMessage: Message = { role: "user", content: input.trim() };
-    const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
-    setInput("");
-    setIsLoading(true);
+      // Add empty assistant message for streaming target
+      setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
 
-    try {
-      const response = await fetch("/api/ai/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: newMessages,
-          model: selectedModel,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to get response");
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error("No reader available");
-
-      const decoder = new TextDecoder();
       let assistantMessage = "";
       let usedKnowledge = false;
 
-      // Add empty assistant message
-      setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+      try {
+        const response = await fetch("/api/ai/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: history,
+            model: selectedModel,
+          }),
+          signal: abortController.signal,
+        });
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+        if (!response.ok) {
+          throw new Error("Failed to get response");
+        }
 
-        const chunk = decoder.decode(value);
-        const lines = chunk.split("\n");
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error("No reader available");
 
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
             const data = line.slice(6);
             if (data === "[DONE]") continue;
 
@@ -103,15 +145,6 @@ export function AIChatClient() {
               const parsed = JSON.parse(data);
               if (parsed.meta?.usedKnowledge) {
                 usedKnowledge = true;
-                setMessages((prev) => {
-                  const updated = [...prev];
-                  updated[updated.length - 1] = {
-                    role: "assistant",
-                    content: "",
-                    usedKnowledge: true,
-                  };
-                  return updated;
-                });
               }
               if (parsed.content) {
                 assistantMessage += parsed.content;
@@ -130,21 +163,70 @@ export function AIChatClient() {
             }
           }
         }
+      } catch (error) {
+        if ((error as Error).name !== "AbortError") {
+          console.error("Chat error:", error);
+          setMessages((prev) => [
+            ...prev.slice(0, -1), // remove empty streaming placeholder
+            {
+              role: "assistant",
+              content:
+                "I apologize, but I encountered an error. Please try again.",
+            },
+          ]);
+          return "";
+        }
+        // Aborted: keep the partial message as-is
+      } finally {
+        setIsStreaming(false);
+        abortRef.current = null;
       }
-    } catch (error) {
-      console.error("Chat error:", error);
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content:
-            "I apologize, but I encountered an error. Please try again.",
-        },
-      ]);
-    } finally {
-      setIsLoading(false);
+
+      return assistantMessage;
+    },
+    [selectedModel]
+  );
+
+  const sendMessage = useCallback(async () => {
+    if (!input.trim() || isLoading) return;
+
+    const userMessage: Message = { role: "user", content: input.trim() };
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
+    setInput("");
+    setIsLoading(true);
+
+    await runStream(newMessages);
+    setIsLoading(false);
+  }, [input, isLoading, messages, runStream]);
+
+  /** Stop an in-flight generation */
+  const stopGeneration = useCallback(() => {
+    abortRef.current?.abort();
+    setIsLoading(false);
+    setIsStreaming(false);
+  }, []);
+
+  /** Regenerate: drop the last assistant message and re-ask */
+  const regenerate = useCallback(async () => {
+    if (isLoading || messages.length === 0) return;
+
+    // Find last user message index; everything after (the assistant reply) gets re-generated
+    let lastUserIndex = -1;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "user") {
+        lastUserIndex = i;
+        break;
+      }
     }
-  }, [input, isLoading, messages, selectedModel]);
+    if (lastUserIndex === -1) return;
+
+    const history = messages.slice(0, lastUserIndex + 1);
+    setMessages(history);
+    setIsLoading(true);
+    await runStream(history);
+    setIsLoading(false);
+  }, [isLoading, messages, runStream]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -154,8 +236,13 @@ export function AIChatClient() {
   };
 
   const clearChat = () => {
+    if (isStreaming) abortRef.current?.abort();
     setMessages([]);
   };
+
+  const lastMessage = messages[messages.length - 1];
+  const canRegenerate =
+    !isLoading && lastMessage?.role === "assistant" && messages.length >= 2;
 
   return (
     <div className="flex flex-col h-[calc(100vh-280px)] min-h-[500px] bg-[var(--jade)] rounded-lg border border-[var(--gold)]/20 overflow-hidden">
@@ -168,7 +255,9 @@ export function AIChatClient() {
           <div>
             <p className="text-sm font-medium text-[var(--ink)]">FuBao Assistant</p>
             <p className="text-xs text-[var(--smoke)]">
-              {models.find((m) => m.id === selectedModel)?.name || "AI Model"}
+              {isStreaming
+                ? "Typing..."
+                : models.find((m) => m.id === selectedModel)?.name || "AI Model"}
             </p>
           </div>
         </div>
@@ -244,27 +333,59 @@ export function AIChatClient() {
           </div>
         )}
 
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-          >
+        {messages.map((message, index) => {
+          const isLastAssistant =
+            message.role === "assistant" && index === messages.length - 1;
+          const streamingThis = isLastAssistant && isStreaming;
+
+          return (
             <div
-              className={`max-w-[80%] rounded-lg px-4 py-3 ${
-                message.role === "user"
-                  ? "bg-[var(--cinnabar)] text-white"
-                  : "bg-[var(--paper)] text-[var(--ink)] border border-[var(--gold)]/20"
-              }`}
+              key={index}
+              className={`group flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
             >
-              {message.role === "assistant" && message.usedKnowledge && (
-                <span className="inline-flex items-center gap-1 mb-1.5 px-2 py-0.5 rounded text-[10px] uppercase tracking-wider bg-[var(--gold)]/10 text-[var(--gold)] border border-[var(--gold)]/30">
-                  Knowledge Base
-                </span>
+              <div
+                className={`max-w-[85%] rounded-lg px-4 py-3 ${
+                  message.role === "user"
+                    ? "bg-[var(--cinnabar)] text-white"
+                    : "bg-[var(--paper)] text-[var(--ink)] border border-[var(--gold)]/20"
+                }`}
+              >
+                {message.role === "assistant" && message.usedKnowledge && (
+                  <span className="inline-flex items-center gap-1 mb-1.5 px-2 py-0.5 rounded text-[10px] uppercase tracking-wider bg-[var(--gold)]/10 text-[var(--gold)] border border-[var(--gold)]/30">
+                    Knowledge Base
+                  </span>
+                )}
+
+                {message.role === "assistant" ? (
+                  <div className="text-sm leading-relaxed [&_p]:mb-2 last:[&_p]:mb-0 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-2 [&_li]:mb-1 [&_strong]:font-semibold [&_a]:text-[var(--cinnabar)] [&_a]:underline [&_a]:underline-offset-2 [&_a]:hover:text-[var(--ink)] [&_h3]:font-serif [&_h3]:text-base [&_h3]:mt-3 [&_h3]:mb-1.5 [&_h4]:font-serif [&_h4]:mt-2 [&_h4]:mb-1 [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--gold)] [&_blockquote]:pl-3 [&_blockquote]:text-[var(--smoke)] [&_code]:bg-[var(--jade)] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-xs [&_pre]:bg-[var(--jade)] [&_pre]:p-3 [&_pre]:rounded [&_pre]:overflow-x-auto [&_pre]:mb-2 [&_table]:w-full [&_table]:mb-2 [&_th]:border [&_th]:border-[var(--gold)]/30 [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:bg-[var(--jade)] [&_td]:border [&_td]:border-[var(--gold)]/30 [&_td]:px-2 [&_td]:py-1 [&_hr]:border-[var(--gold)]/30 [&_hr]:my-3">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {message.content}
+                    </ReactMarkdown>
+                    {streamingThis && <StreamingCursor />}
+                  </div>
+                ) : (
+                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                )}
+              </div>
+
+              {/* Hover actions on completed assistant messages */}
+              {message.role === "assistant" && !streamingThis && message.content && (
+                <div className="self-end ml-1.5 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                  <CopyButton text={message.content} />
+                  {isLastAssistant && canRegenerate && (
+                    <button
+                      onClick={regenerate}
+                      className="p-1.5 rounded text-[var(--smoke)] hover:text-[var(--ink)] hover:bg-[var(--jade)] transition-colors"
+                      title="Regenerate response"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               )}
-              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         {isLoading && messages[messages.length - 1]?.role === "user" && (
           <div className="flex justify-start">
@@ -300,13 +421,23 @@ export function AIChatClient() {
             rows={1}
             disabled={isLoading}
           />
-          <button
-            onClick={sendMessage}
-            disabled={!input.trim() || isLoading}
-            className="px-6 py-3 rounded-lg bg-[var(--cinnabar)] text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Send
-          </button>
+          {isLoading ? (
+            <button
+              onClick={stopGeneration}
+              className="px-6 py-3 rounded-lg border border-[var(--cinnabar)] text-[var(--cinnabar)] text-sm font-medium hover:bg-[var(--cinnabar)]/5 transition-colors flex items-center gap-2"
+            >
+              <Square className="w-4 h-4" />
+              Stop
+            </button>
+          ) : (
+            <button
+              onClick={sendMessage}
+              disabled={!input.trim()}
+              className="px-6 py-3 rounded-lg bg-[var(--cinnabar)] text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Send
+            </button>
+          )}
         </div>
         <p className="mt-2 text-xs text-[var(--smoke)] text-center">
           For entertainment and educational purposes only. Not a substitute for professional guidance.

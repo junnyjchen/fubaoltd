@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { LLMClient, KnowledgeClient, Config, HeaderUtils } from "coze-coding-dev-sdk";
+import { getProducts } from "@/lib/api";
 
 export const runtime = "nodejs";
 
@@ -21,6 +22,16 @@ Important guidelines:
 - Keep responses concise but informative
 
 You can speak both English and Chinese. Respond in the same language the user uses.`;
+
+// Product catalog injected so the assistant can recommend real products
+const PRODUCT_PROMPT_TEMPLATE = `
+
+--- Product Catalog ---
+You may recommend products from FuBao's current catalog when they match the user's needs. Present them naturally within your answer (e.g. a short bullet list with the product name as a link). Prices are in USD.
+
+{catalog}
+
+When recommending, use this link format: [Product Name](/talisman/<slug>). Only recommend products from the catalog above; never invent products, prices, or links.`;
 
 // RAG instructions appended when knowledge base context is available
 const RAG_INSTRUCTIONS = `
@@ -65,6 +76,29 @@ async function retrieveKnowledgeContext(
   return null;
 }
 
+/**
+ * Build a product catalog section for the system prompt so the assistant
+ * recommends real products with correct names, prices and URLs.
+ */
+async function buildProductCatalogPrompt(): Promise<string> {
+  try {
+    const products = await getProducts();
+    if (products.length === 0) return "";
+
+    const lines = products
+      .map(
+        (p) =>
+          `- ${p.name} | $${p.price.toFixed(2)} | ${p.category} | ${p.tagline} | /talisman/${p.slug}`
+      )
+      .join("\n");
+
+    return `\n\n## Product Catalog (live)\nWhen recommending products, use ONLY items from this list. Format product mentions as markdown links: [Product Name](/talisman/slug).\n${lines}`;
+  } catch (error) {
+    console.warn("Product catalog prompt build failed:", error);
+    return "";
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { messages, model = "doubao-seed-2-0-mini-260215" } = await request.json();
@@ -94,9 +128,15 @@ export async function POST(request: NextRequest) {
         lastUserMessage.content
       );
       if (context) {
-        systemPrompt = BASE_SYSTEM_PROMPT + RAG_INSTRUCTIONS.replace("{context}", context);
+        systemPrompt = systemPrompt + RAG_INSTRUCTIONS.replace("{context}", context);
         usedKnowledge = true;
       }
+    }
+
+    // Product catalog awareness: append live catalog so recommendations are real
+    const catalogPrompt = await buildProductCatalogPrompt();
+    if (catalogPrompt) {
+      systemPrompt = systemPrompt + catalogPrompt;
     }
 
     // Prepare messages with system prompt
@@ -107,29 +147,48 @@ export async function POST(request: NextRequest) {
 
     // Create streaming response
     const encoder = new TextEncoder();
+    const signal = request.signal;
     const readableStream = new ReadableStream({
       async start(controller) {
+        const safeEnqueue = (chunk: string): boolean => {
+          if (signal.aborted) return false;
+          try {
+            controller.enqueue(encoder.encode(chunk));
+            return true;
+          } catch {
+            // Controller already closed (client aborted mid-stream)
+            return false;
+          }
+        };
         try {
           // First frame tells the client whether knowledge context was used
-          controller.enqueue(
-            encoder.encode(
+          if (
+            !safeEnqueue(
               `data: ${JSON.stringify({ meta: { usedKnowledge } })}\n\n`
             )
-          );
+          ) {
+            return;
+          }
           for await (const chunk of client.stream(fullMessages, {
             model,
             temperature: 0.7,
           })) {
+            if (signal.aborted) break;
             if (chunk.content) {
               const data = `data: ${JSON.stringify({ content: chunk.content })}\n\n`;
-              controller.enqueue(encoder.encode(data));
+              if (!safeEnqueue(data)) return;
             }
           }
-          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-          controller.close();
+          safeEnqueue("data: [DONE]\n\n");
+          if (!signal.aborted) controller.close();
         } catch (error) {
+          if (signal.aborted) return;
           console.error("Stream error:", error);
-          controller.error(error);
+          try {
+            controller.error(error);
+          } catch {
+            // Controller already closed; nothing to propagate
+          }
         }
       },
     });

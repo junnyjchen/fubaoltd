@@ -144,6 +144,7 @@ Defined in `src/app/globals.css` and `DESIGN.md`:
 - Product search via `?q=` searchParam on `/talisman` (`SearchBox` client component, `talisman/search-box.tsx`): matches product name/tagline/description case-insensitively, composes with `?category=`, "N results for 'query'" indicator + "View all talismans" reset link; empty state with curated suggestions when 0 hits. `getProducts({ search })` mirrors Spree `filter[name]` semantics
 - Five Elements quiz uses deterministic rules (same input = same output)
 - Verification uses mock codes (FB-2026-XXXXXX format)
+- AI Assistant (`/ai-chat`): SSE streaming (`/api/ai/chat`), model selector from `/api/ai/models` (doubao-seed/lite/pro), markdown rendering (react-markdown + remark-gfm), RAG over knowledge base (`usedKnowledge` meta frame after content frames, `data: [DONE]` terminator). System prompt injects the live product catalog via `getProducts()` so answers link real slugs (`[Protection Talisman](/talisman/protection-talisman)`); compliance rules enforced (no supernatural claims, "For entertainment purposes only"). Client controls: stop generation (AbortController), copy message, regenerate last answer, clear chat. Abort-safe stream: controller closed after cancel → enqueue guarded by try/catch
 
 ## Commands
 
