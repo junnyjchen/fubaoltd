@@ -1,44 +1,11 @@
 import Link from 'next/link';
 import { getFeaturedProducts } from '@/lib/api';
-import { Star } from 'lucide-react';
-
-const ritualSteps = [
-  {
-    step: 1,
-    title: 'Selection of Auspicious Date',
-    desc: 'Master Chen consults the Taoist almanac to identify the most harmonious date for the ceremony.',
-  },
-  {
-    step: 2,
-    title: 'Purification',
-    desc: 'A period of fasting and meditation to cleanse the body and mind before the sacred work begins.',
-  },
-  {
-    step: 3,
-    title: 'Cinnabar Ink',
-    desc: 'Premium cinnabar is carefully prepared — its deep red hue symbolizes life force and spiritual power.',
-  },
-  {
-    step: 4,
-    title: 'Hand-drawn Talisman',
-    desc: 'With decades of practice, Master Chen draws each symbol with precise, intentional brushstrokes.',
-  },
-  {
-    step: 5,
-    title: 'Chanting',
-    desc: 'Ancient sutras are chanted to infuse the talisman with focused spiritual energy and intention.',
-  },
-  {
-    step: 6,
-    title: 'Consecration Ceremony',
-    desc: 'The completed talisman undergoes a formal consecration ritual in the temple hall.',
-  },
-  {
-    step: 7,
-    title: 'Sealing',
-    desc: 'The talisman is sealed with the temple stamp, a unique code, and prepared for its journey to you.',
-  },
-];
+import { ArrowRight } from 'lucide-react';
+import { FeaturedHeader } from './featured-header';
+import { ProductCard } from './product-card';
+import { RitualGrid } from './ritual-grid';
+import { MasterImage } from './master-image';
+import { TestimonialCard } from './testimonial-card';
 
 const testimonials = [
   {
@@ -67,109 +34,85 @@ export default async function HomePage() {
   return (
     <div>
       {/* Hero */}
-      <section className="relative flex min-h-[85vh] items-center justify-center overflow-hidden bg-paper">
-        <div className="absolute inset-0 opacity-[0.03]"
+      <section className="relative flex min-h-[90vh] items-center justify-center overflow-hidden bg-paper">
+        <div className="absolute inset-0 opacity-[0.02]"
           style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%231A1A1A' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%231A1A1A' fill-opacity='1'%3E%3Cpath d='M40 0C17.909 0 0 17.909 0 40s17.909 40 40 40 40-17.909 40-40S62.091 0 40 0zm0 78C19.013 78 2 60.987 2 40S19.013 2 40 2s38 17.013 38 38-17.013 38-38 38z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
           }}
         />
+        <div className="absolute left-[15%] top-0 h-full w-px bg-gradient-to-b from-transparent via-cinnabar/5 to-transparent" />
+        <div className="absolute right-[15%] top-0 h-full w-px bg-gradient-to-b from-transparent via-cinnabar/5 to-transparent" />
+
         <div className="relative z-10 mx-auto max-w-4xl px-4 text-center">
-          <p className="mb-6 text-xs font-medium uppercase tracking-[0.3em] text-smoke">
-            Hand-drawn in Hong Kong
-          </p>
-          <h1 className="font-serif text-5xl font-light leading-tight tracking-wide text-ink sm:text-6xl md:text-7xl">
+          <div className="mb-8 inline-flex items-center gap-3">
+            <div className="h-px w-8 bg-gold/40" />
+            <p className="text-[10px] font-medium uppercase tracking-[0.4em] text-smoke">
+              Hand-drawn in Hong Kong
+            </p>
+            <div className="h-px w-8 bg-gold/40" />
+          </div>
+
+          <h1 className="font-serif text-5xl font-light leading-[1.15] tracking-wide text-ink sm:text-6xl md:text-7xl lg:text-8xl">
             Ancient Wisdom,
             <br />
             <span className="italic text-cinnabar">Drawn by Hand</span>
           </h1>
-          <p className="mx-auto mt-8 max-w-2xl text-lg leading-relaxed text-smoke">
+
+          <p className="mx-auto mt-8 max-w-xl text-base leading-relaxed text-smoke sm:text-lg">
             Each FuBao talisman is hand-drawn by Master Chen in a Hong Kong
             Taoist temple, carrying centuries of cultural heritage through
             authentic consecration rituals.
           </p>
-          <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+
+          <div className="mt-12 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <Link
               href="/talisman"
-              className="inline-flex items-center border border-cinnabar bg-cinnabar px-8 py-3 text-sm font-medium tracking-wide text-white transition-all duration-300 hover:bg-cinnabar/90"
+              className="group inline-flex items-center gap-2 border border-cinnabar bg-cinnabar px-8 py-3.5 text-sm font-medium tracking-wide text-white transition-all duration-300 hover:bg-cinnabar/90"
             >
               Shop Talismans
+              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
             </Link>
             <Link
               href="/about"
-              className="inline-flex items-center border border-ink px-8 py-3 text-sm font-medium tracking-wide text-ink transition-all duration-300 hover:bg-ink hover:text-white"
+              className="inline-flex items-center border border-ink/20 px-8 py-3.5 text-sm font-medium tracking-wide text-ink transition-all duration-300 hover:border-ink hover:bg-ink hover:text-white"
             >
               Our Story
             </Link>
+          </div>
+
+          <div className="mt-16 flex flex-col items-center gap-2">
+            <div className="h-8 w-px bg-gradient-to-b from-transparent to-smoke/30" />
+            <div className="h-1.5 w-1.5 rounded-full bg-smoke/30" />
           </div>
         </div>
       </section>
 
       {/* Featured Products */}
-      <section className="bg-paper py-24">
+      <section className="bg-paper py-24 sm:py-32">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mb-16 text-center">
-            <p className="mb-3 text-xs font-medium uppercase tracking-[0.3em] text-cinnabar">
-              Collection
-            </p>
-            <h2 className="font-serif text-3xl font-light tracking-wide text-ink sm:text-4xl">
-              Featured Talismans
-            </h2>
-          </div>
+          <FeaturedHeader />
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {featured.map((product) => (
-              <Link
-                key={product.slug}
-                href={`/talisman/${product.slug}`}
-                className="group"
-              >
-                <div className="aspect-[3/4] overflow-hidden bg-jade">
-                  <div className="flex h-full w-full items-center justify-center">
-                    <div className="text-center">
-                      <div className="mx-auto mb-4 h-24 w-24 rounded-full border-2 border-cinnabar/20 flex items-center justify-center">
-                        <span className="font-serif text-3xl text-cinnabar/40">符</span>
-                      </div>
-                      <p className="text-xs tracking-widest text-smoke/60 uppercase">
-                        {product.category}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <h3 className="font-serif text-lg font-light text-ink transition-colors group-hover:text-cinnabar">
-                    {product.name}
-                  </h3>
-                  <p className="mt-1 text-sm text-smoke">{product.tagline}</p>
-                  <div className="mt-2 flex items-center justify-between">
-                    <span className="text-sm font-medium text-cinnabar">
-                      ${product.price.toFixed(2)}
-                    </span>
-                    <div className="flex items-center gap-1">
-                      <Star className="h-3 w-3 fill-gold text-gold" />
-                      <span className="text-xs text-smoke">
-                        {product.rating}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </Link>
+            {featured.map((product, i) => (
+              <ProductCard key={product.slug} product={product} delay={i * 100} />
             ))}
           </div>
-          <div className="mt-12 text-center">
+          <div className="mt-16 text-center">
             <Link
               href="/talisman"
-              className="inline-flex items-center text-sm tracking-wide text-ink underline underline-offset-4 transition-colors hover:text-cinnabar"
+              className="group inline-flex items-center gap-2 text-sm tracking-wide text-ink underline underline-offset-4 transition-colors hover:text-cinnabar"
             >
-              View All Talismans →
+              View All Talismans
+              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
             </Link>
           </div>
         </div>
       </section>
 
       {/* Ritual Process */}
-      <section className="bg-jade py-24">
+      <section className="bg-jade py-24 sm:py-32">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-16 text-center">
-            <p className="mb-3 text-xs font-medium uppercase tracking-[0.3em] text-cinnabar">
+            <p className="mb-3 text-[10px] font-medium uppercase tracking-[0.4em] text-cinnabar">
               The Sacred Process
             </p>
             <h2 className="font-serif text-3xl font-light tracking-wide text-ink sm:text-4xl">
@@ -181,57 +124,30 @@ export default async function HomePage() {
               tradition.
             </p>
           </div>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {ritualSteps.map((item) => (
-              <div
-                key={item.step}
-                className="relative border border-border bg-paper p-6 transition-all duration-300 hover:border-cinnabar/30"
-              >
-                <span className="font-serif text-4xl font-light text-cinnabar/20">
-                  {String(item.step).padStart(2, '0')}
-                </span>
-                <h3 className="mt-2 font-serif text-base font-medium text-ink">
-                  {item.title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-smoke">
-                  {item.desc}
-                </p>
-              </div>
-            ))}
-          </div>
+          <RitualGrid />
         </div>
       </section>
 
       {/* Master Section */}
-      <section className="bg-paper py-24">
+      <section className="bg-paper py-24 sm:py-32">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid items-center gap-12 lg:grid-cols-2">
-            <div className="aspect-square overflow-hidden bg-jade">
-              <div className="flex h-full w-full items-center justify-center">
-                <div className="text-center">
-                  <div className="mx-auto mb-4 h-32 w-32 rounded-full border-2 border-cinnabar/20 flex items-center justify-center">
-                    <span className="font-serif text-4xl text-cinnabar/40">道</span>
-                  </div>
-                  <p className="text-sm tracking-widest text-smoke/60 uppercase">
-                    Master Chen Zhiwei
-                  </p>
-                </div>
-              </div>
-            </div>
+            <MasterImage />
             <div>
-              <p className="mb-3 text-xs font-medium uppercase tracking-[0.3em] text-cinnabar">
+              <p className="mb-3 text-[10px] font-medium uppercase tracking-[0.4em] text-cinnabar">
                 The Master
               </p>
               <h2 className="font-serif text-3xl font-light tracking-wide text-ink sm:text-4xl">
                 Master Chen Zhiwei
               </h2>
-              <p className="mt-6 text-sm leading-relaxed text-smoke">
+              <div className="mt-1 h-px w-12 bg-gold/40" />
+              <p className="mt-6 text-sm leading-[1.8] text-smoke">
                 With over thirty years of dedicated practice in Taoist arts,
                 Master Chen Zhiwei is one of Hong Kong&apos;s most respected
                 talisman practitioners. Trained under the lineage of Qingyun
                 Temple, he carries forward a tradition that spans generations.
               </p>
-              <p className="mt-4 text-sm leading-relaxed text-smoke">
+              <p className="mt-4 text-sm leading-[1.8] text-smoke">
                 Each talisman that bears his hand is drawn during auspicious
                 hours, using traditional cinnabar ink and consecrated paper.
                 His brushwork is not merely calligraphy — it is a meditative
@@ -240,9 +156,10 @@ export default async function HomePage() {
               </p>
               <Link
                 href="/about"
-                className="mt-8 inline-flex items-center text-sm tracking-wide text-ink underline underline-offset-4 transition-colors hover:text-cinnabar"
+                className="group mt-8 inline-flex items-center gap-2 text-sm tracking-wide text-ink underline underline-offset-4 transition-colors hover:text-cinnabar"
               >
-                Read the full story →
+                Read the full story
+                <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
               </Link>
             </div>
           </div>
@@ -250,59 +167,50 @@ export default async function HomePage() {
       </section>
 
       {/* Testimonials */}
-      <section className="bg-jade py-24">
+      <section className="bg-jade py-24 sm:py-32">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-16 text-center">
-            <p className="mb-3 text-xs font-medium uppercase tracking-[0.3em] text-cinnabar">
+            <p className="mb-3 text-[10px] font-medium uppercase tracking-[0.4em] text-cinnabar">
               Testimonials
             </p>
             <h2 className="font-serif text-3xl font-light tracking-wide text-ink sm:text-4xl">
               Words from Our Community
             </h2>
           </div>
-          <div className="grid gap-8 md:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-3">
             {testimonials.map((t, i) => (
-              <div
-                key={i}
-                className="border border-border bg-paper p-8"
-              >
-                <div className="mb-4 flex gap-1">
-                  {Array.from({ length: 5 }).map((_, j) => (
-                    <Star
-                      key={j}
-                      className="h-3 w-3 fill-gold text-gold"
-                    />
-                  ))}
-                </div>
-                <p className="text-sm leading-relaxed text-ink italic">
-                  &ldquo;{t.quote}&rdquo;
-                </p>
-                <div className="mt-6">
-                  <p className="text-sm font-medium text-ink">{t.author}</p>
-                  <p className="text-xs text-smoke">{t.location}</p>
-                </div>
-              </div>
+              <TestimonialCard key={i} testimonial={t} delay={i * 120} />
             ))}
           </div>
         </div>
       </section>
 
       {/* CTA */}
-      <section className="bg-paper py-24">
+      <section className="bg-paper py-24 sm:py-32">
         <div className="mx-auto max-w-3xl px-4 text-center">
+          <div className="mb-6 inline-flex items-center gap-3">
+            <div className="h-px w-8 bg-gold/40" />
+            <p className="text-[10px] font-medium uppercase tracking-[0.4em] text-cinnabar">
+              Discover Your Element
+            </p>
+            <div className="h-px w-8 bg-gold/40" />
+          </div>
           <h2 className="font-serif text-3xl font-light tracking-wide text-ink sm:text-4xl">
-            Discover Your Element
+            Find the Talisman That
+            <br />
+            <span className="italic">Resonates with You</span>
           </h2>
-          <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-smoke">
-            Take our Five Elements Quiz to find which talisman resonates with
-            your unique energy. Based on traditional Taoist principles of
-            balance and harmony.
+          <p className="mx-auto mt-6 max-w-lg text-sm leading-relaxed text-smoke">
+            Take our Five Elements Quiz to discover your dominant element based
+            on traditional Taoist principles, and receive personalized talisman
+            recommendations.
           </p>
           <Link
             href="/elements-quiz"
-            className="mt-8 inline-flex items-center border border-cinnabar bg-cinnabar px-8 py-3 text-sm font-medium tracking-wide text-white transition-all duration-300 hover:bg-cinnabar/90"
+            className="group mt-10 inline-flex items-center gap-2 border border-cinnabar bg-cinnabar px-8 py-3.5 text-sm font-medium tracking-wide text-white transition-all duration-300 hover:bg-cinnabar/90"
           >
             Take the Quiz
+            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
           </Link>
         </div>
       </section>
