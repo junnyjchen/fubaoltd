@@ -117,12 +117,28 @@ export default async function ProductDetailPage({ params }: Props) {
             </div>
 
             {/* Price */}
-            <p className="mt-6 text-2xl font-light text-cinnabar">
-              ${product.price.toFixed(2)} <span className="text-sm text-smoke">USD</span>
-            </p>
+            {product.isFreeGift ? (
+              <p className="mt-6 text-2xl font-light text-cinnabar">
+                <span className="text-lg tracking-wide">FREE</span>{' '}
+                <span className="text-sm text-smoke">— pay shipping only, or pick up free in Hong Kong</span>
+              </p>
+            ) : (
+              <p className="mt-6 text-2xl font-light text-cinnabar">
+                ${product.price.toFixed(2)} <span className="text-sm text-smoke">USD</span>
+              </p>
+            )}
 
-            {/* Add to Cart */}
-            <ProductDetailClient product={product} />
+            {/* Add to Cart / Free Blessing Claim */}
+            {product.isFreeGift ? (
+              <Link
+                href="/blessing"
+                className="mt-6 inline-flex items-center justify-center gap-2 bg-cinnabar px-6 py-3 text-xs font-medium tracking-[0.2em] text-paper transition-colors hover:bg-cinnabar/90"
+              >
+                RECEIVE YOUR FREE BLESSING
+              </Link>
+            ) : (
+              <ProductDetailClient product={product} />
+            )}
 
             {/* Wishlist + Share */}
             <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-3">

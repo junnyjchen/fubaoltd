@@ -107,6 +107,28 @@ export const products: Product[] = [
     rating: 5.0,
     reviewCount: 38,
   },
+  {
+    slug: 'free-blessing-talisman',
+    name: 'Free Blessing Talisman',
+    price: 0,
+    category: 'Protection',
+    tagline: 'A consecrated cultural keepsake, offered freely to our community',
+    story: [
+      'The Blessing Talisman (接福符) is our gift to the community — a hand-drawn keepsake prepared by Master Chen following the same seven-step consecration process as our full collection.',
+      'Each piece is drawn on yellow rice paper with cinnabar ink and sealed at Qingyun Temple. We offer one per guest so that as many people as possible can carry a piece of this living tradition.',
+      'Choose free on-site pickup at our Hong Kong temple, or have it mailed anywhere in the world — you only cover the shipping.',
+    ],
+    image_key: 'talisman-blessing.jpg',
+    ritual_info: {
+      master: 'Master Chen Zhiwei',
+      location: 'Qingyun Temple, Hong Kong',
+      date: '2025-04-01',
+      ceremonyId: 'CER-2025-006',
+    },
+    rating: 5.0,
+    reviewCount: 0,
+    isFreeGift: true,
+  },
 ];
 
 export const reviews: Review[] = [

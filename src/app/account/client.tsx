@@ -393,6 +393,13 @@ export function AccountPageClient() {
             <span className="block font-medium">Giveaways</span>
             <span className="text-xs text-muted-foreground">Claim seasonal prizes</span>
           </Link>
+          <Link
+            href="/blessing"
+            className="p-3 border border-border rounded-md text-sm text-foreground hover:bg-muted transition-colors text-left"
+          >
+            <span className="block font-medium">Free Blessing</span>
+            <span className="text-xs text-muted-foreground">Claim your gift</span>
+          </Link>
           <button
             onClick={copyReferral}
             className="p-3 border border-border rounded-md text-sm text-foreground hover:bg-muted transition-colors text-left"

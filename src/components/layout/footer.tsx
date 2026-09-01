@@ -101,6 +101,14 @@ export function Footer() {
               </li>
               <li>
                 <Link
+                  href="/blessing"
+                  className="text-sm text-smoke transition-colors hover:text-ink"
+                >
+                  Free Blessing
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/elements-quiz"
                   className="text-sm text-smoke transition-colors hover:text-ink"
                 >

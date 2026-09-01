@@ -25,6 +25,8 @@ export interface Product {
   rating: number;
   reviewCount: number;
   isPersonalized?: boolean;
+  /** Free community gift (Blessing Pavilion) — hidden from catalog listings, gated one per account */
+  isFreeGift?: boolean;
 }
 
 // ─── Cart Types ───

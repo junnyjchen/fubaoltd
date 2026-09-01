@@ -24,6 +24,13 @@ export async function GET(request: NextRequest) {
 
   let filtered = [...products];
 
+  // Free-gift products (e.g. the blessing talisman) stay out of the public
+  // catalog listing; they remain reachable via the direct slug endpoint or an
+  // explicit filter[skus] lookup. Keeps product/variant id numbering stable.
+  if (!params.get('filter[skus]')) {
+    filtered = filtered.filter((p) => !p.isFreeGift);
+  }
+
   // filter[name] — substring match on name/tagline
   const nameFilter = params.get('filter[name]');
   if (nameFilter) {

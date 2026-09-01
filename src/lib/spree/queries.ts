@@ -15,11 +15,14 @@ export type SpreeProductResource = SpreeResource;
 
 /** List products with optional taxon (category) filter, Spree v2 style. */
 export function listSpreeProducts(category?: string): SpreeProductResource[] {
+  // Free community gifts (Blessing Pavilion) are gated promos — never listed
+  // in the catalog, search, or featured slots. Slug access still works.
+  const catalog = products.filter((p) => !p.isFreeGift);
   const filtered = category
-    ? products.filter(
+    ? catalog.filter(
         (p) => p.category.toLowerCase() === category.toLowerCase()
       )
-    : products;
+    : catalog;
   return filtered.map((p) => serializeProduct(p));
 }
 

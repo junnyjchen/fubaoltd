@@ -99,6 +99,7 @@ export function mapProductAttributes(
     rating: numAttr(rawAttrs.rating, 4.8),
     reviewCount: numAttr(rawAttrs.review_count, 0),
     isPersonalized: Boolean(rawAttrs.is_personalized),
+    isFreeGift: Boolean(rawAttrs.is_free_gift),
     // Spree-specific extras consumed by the cart flow (not part of Product UI)
     ...(variantId ? { _variantId: variantId } : {}),
     _productId: id,

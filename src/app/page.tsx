@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getFeaturedProducts } from '@/lib/api';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Gift } from 'lucide-react';
 import { FeaturedHeader } from './featured-header';
 import { ProductCard } from './product-card';
 import { RitualGrid } from './ritual-grid';
@@ -73,10 +73,11 @@ export default async function HomePage() {
               <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
             </Link>
             <Link
-              href="/about"
-              className="inline-flex items-center border border-ink/20 px-8 py-3.5 text-sm font-medium tracking-wide text-ink transition-all duration-300 hover:border-ink hover:bg-ink hover:text-white"
+              href="/blessing"
+              className="inline-flex items-center gap-2 border border-gold/50 px-8 py-3.5 text-sm font-medium tracking-wide text-ink transition-all duration-300 hover:border-gold"
             >
-              Our Story
+              <Gift className="h-3.5 w-3.5 text-gold" strokeWidth={1.5} />
+              Receive a Free Blessing
             </Link>
           </div>
 
