@@ -6,6 +6,7 @@ import { RefCapture } from '@/components/shared/ref-capture';
 import { AuthProvider } from '@/lib/auth/auth-context';
 import { FavoritesProvider } from '@/lib/favorites/favorites-context';
 import { LocaleProvider } from '@/lib/i18n/locale-context';
+import { Toaster } from '@/components/ui/sonner';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -51,6 +52,7 @@ export default function RootLayout({
               <Header />
               <main className="min-h-[calc(100vh-4rem)]">{children}</main>
               <Footer />
+              <Toaster position="bottom-right" />
             </FavoritesProvider>
           </AuthProvider>
         </LocaleProvider>

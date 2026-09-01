@@ -185,6 +185,27 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* Giveaway strip */}
+      <section className="border-y border-gold/20 bg-jade/60 py-8">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 text-center sm:flex-row sm:px-6 sm:text-left lg:px-8">
+          <div>
+            <p className="text-[10px] font-medium uppercase tracking-[0.4em] text-cinnabar">
+              Community Event
+            </p>
+            <p className="mt-1.5 text-sm text-ink">
+              Seasonal giveaways are open — claim a hand-drawn talisman keepsake.
+            </p>
+          </div>
+          <Link
+            href="/giveaways"
+            className="inline-flex items-center gap-2 border border-cinnabar px-6 py-2.5 text-sm font-medium tracking-wide text-cinnabar transition-all duration-300 hover:bg-cinnabar hover:text-white"
+          >
+            View Giveaways
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="bg-paper py-24 sm:py-32">
         <div className="mx-auto max-w-3xl px-4 text-center">

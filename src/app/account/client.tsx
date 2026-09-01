@@ -386,6 +386,13 @@ export function AccountPageClient() {
             <span className="block font-medium">AI Assistant</span>
             <span className="text-xs text-muted-foreground">Talisman guidance</span>
           </Link>
+          <Link
+            href="/giveaways"
+            className="p-3 border border-border rounded-md text-sm text-foreground hover:bg-muted transition-colors text-left"
+          >
+            <span className="block font-medium">Giveaways</span>
+            <span className="text-xs text-muted-foreground">Claim seasonal prizes</span>
+          </Link>
           <button
             onClick={copyReferral}
             className="p-3 border border-border rounded-md text-sm text-foreground hover:bg-muted transition-colors text-left"

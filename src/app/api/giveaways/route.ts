@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getActiveGiveaways, getAllGiveaways, claimGiveaway } from '@/lib/giveaways/giveaway-store';
+import { createNotification } from '@/lib/notifications/notification-store';
 import { getSession } from '@/lib/auth/session';
 import { getUserById } from '@/lib/auth/user-store';
 
@@ -28,6 +29,15 @@ export async function POST(request: Request) {
     const result = claimGiveaway(giveawayId, session.sub, user?.name || 'Anonymous');
 
     if (!result.success) return NextResponse.json({ success: false, error: result.error }, { status: 400 });
+
+    const giveaway = getActiveGiveaways().find(g => g.id === giveawayId) || getAllGiveaways().find(g => g.id === giveawayId);
+    createNotification(
+      session.sub,
+      'promotion',
+      'Giveaway Prize Claimed',
+      `You claimed the "${giveaway?.title ?? 'giveaway'}" prize. Our team will contact you about fulfillment.`,
+      '/giveaways'
+    );
 
     return NextResponse.json({ success: true, message: 'Congratulations! You claimed this prize!' });
   } catch (error) {

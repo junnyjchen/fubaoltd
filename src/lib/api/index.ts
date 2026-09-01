@@ -1,5 +1,7 @@
 import { products, reviews, verificationRecords } from "@/lib/data/products";
 import { TAXON_TREE, vendorIdForProduct } from "@/lib/spree-compat/serializers";
+import { getActiveGiveaways } from "@/lib/giveaways/giveaway-store";
+import type { Giveaway } from "@/lib/giveaways/types";
 import type {
   Product,
   Review,
@@ -11,6 +13,14 @@ import type {
   ShippingAddress,
   FiveElement,
 } from "@/lib/data/types";
+
+// ============ Giveaways ============
+
+export type { Giveaway };
+
+export async function getGiveaways(): Promise<Giveaway[]> {
+  return getActiveGiveaways();
+}
 
 // ============ Articles ============
 
