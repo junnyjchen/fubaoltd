@@ -15,6 +15,7 @@ import {
 } from '@/lib/spree-compat/order-store';
 import { serializeOrder, orderIncluded } from '@/lib/spree-compat/order-serializer';
 import { notifyOrderCompleted } from '@/lib/notifications/order-notify';
+import { recordOrderCommission } from '@/lib/distribution/order-commission';
 
 export async function PATCH(request: NextRequest) {
   const token = request.headers.get('X-Spree-Order-Token');
@@ -51,6 +52,11 @@ export async function PATCH(request: NextRequest) {
   // Notify the buyer when the cart belongs to a logged-in user (guest carts
   // have no account to notify). Deduped by order number.
   notifyOrderCompleted(cart);
+
+  // Credit referral commission if the buyer was referred by another user
+  // (referredBy set at registration via ?ref= code). No-op for guests,
+  // self-referrals, or already-credited orders.
+  await recordOrderCommission(cart);
 
   return NextResponse.json({ data: serializeOrder(cart), included: orderIncluded(cart) });
 }

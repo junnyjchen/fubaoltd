@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth/auth-context';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -14,6 +14,12 @@ export function RegisterPageClient() {
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const router = useRouter();
+
+  // Pre-fill referral code captured from ?ref= link (RefCapture stores it)
+  useEffect(() => {
+    const captured = window.localStorage.getItem('fubao_ref_code');
+    if (captured) setReferralCode(captured);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

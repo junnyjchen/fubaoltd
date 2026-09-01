@@ -158,6 +158,13 @@ export async function getUserByEmail(email: string): Promise<User | null> {
   return userWithoutPassword;
 }
 
+export async function getUserByReferralCode(code: string): Promise<User | null> {
+  const found = Array.from(users.values()).find(u => u.referralCode === code);
+  if (!found) return null;
+  const { passwordHash: _, ...userWithoutPassword } = found;
+  return userWithoutPassword;
+}
+
 export async function updateUser(
   id: string,
   updates: Partial<User>

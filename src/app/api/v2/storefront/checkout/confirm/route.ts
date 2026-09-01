@@ -16,6 +16,7 @@ import {
 } from '@/lib/spree-compat/order-store';
 import { serializeOrder, orderIncluded } from '@/lib/spree-compat/order-serializer';
 import { notifyOrderCompleted } from '@/lib/notifications/order-notify';
+import { recordOrderCommission } from '@/lib/distribution/order-commission';
 
 export async function PATCH(request: NextRequest) {
   const token = request.headers.get('X-Spree-Order-Token');
@@ -48,6 +49,9 @@ export async function PATCH(request: NextRequest) {
   // The confirm step often finishes the order (Spree confirm→complete
   // semantics) — notify here too. Deduped by order number.
   notifyOrderCompleted(order);
+
+  // Credit referral commission (deduped per order, no-op for guests).
+  await recordOrderCommission(order);
 
   return NextResponse.json({ data: serializeOrder(order), included: orderIncluded(order) });
 }

@@ -366,6 +366,13 @@ export function AccountPageClient() {
             <span className="text-xs text-muted-foreground">View order history</span>
           </a>
           <Link
+            href="/referral"
+            className="p-3 border border-border rounded-md text-sm text-foreground hover:bg-muted transition-colors text-left"
+          >
+            <span className="block font-medium">Referral Hub</span>
+            <span className="text-xs text-muted-foreground">Link, clicks & commissions</span>
+          </Link>
+          <Link
             href="/talisman"
             className="p-3 border border-border rounded-md text-sm text-foreground hover:bg-muted transition-colors text-left"
           >

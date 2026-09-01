@@ -92,6 +92,10 @@ export function getUserCommissions(userId: string): Commission[] {
   return Array.from(commissions.values()).filter(c => c.affiliateId === userId);
 }
 
+export function hasCommissionForOrder(orderId: string): boolean {
+  return Array.from(commissions.values()).some(c => c.orderId === orderId);
+}
+
 export function getAffiliateLink(userId: string): AffiliateLink | null {
   return Array.from(affiliateLinks.values()).find(l => l.userId === userId) || null;
 }

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { FontPreload } from '@/components/layout/font-preload';
+import { RefCapture } from '@/components/shared/ref-capture';
 import { AuthProvider } from '@/lib/auth/auth-context';
 import { FavoritesProvider } from '@/lib/favorites/favorites-context';
 import { LocaleProvider } from '@/lib/i18n/locale-context';
@@ -42,6 +43,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="min-h-screen bg-paper text-ink antialiased">
         <FontPreload />
+        <RefCapture />
         <LocaleProvider>
           <AuthProvider>
             <FavoritesProvider>
