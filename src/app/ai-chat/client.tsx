@@ -5,6 +5,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 interface Message {
   role: "user" | "assistant";
   content: string;
+  usedKnowledge?: boolean;
 }
 
 interface Model {
@@ -81,6 +82,7 @@ export function AIChatClient() {
 
       const decoder = new TextDecoder();
       let assistantMessage = "";
+      let usedKnowledge = false;
 
       // Add empty assistant message
       setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
@@ -99,6 +101,18 @@ export function AIChatClient() {
 
             try {
               const parsed = JSON.parse(data);
+              if (parsed.meta?.usedKnowledge) {
+                usedKnowledge = true;
+                setMessages((prev) => {
+                  const updated = [...prev];
+                  updated[updated.length - 1] = {
+                    role: "assistant",
+                    content: "",
+                    usedKnowledge: true,
+                  };
+                  return updated;
+                });
+              }
               if (parsed.content) {
                 assistantMessage += parsed.content;
                 setMessages((prev) => {
@@ -106,6 +120,7 @@ export function AIChatClient() {
                   updated[updated.length - 1] = {
                     role: "assistant",
                     content: assistantMessage,
+                    usedKnowledge,
                   };
                   return updated;
                 });
@@ -241,6 +256,11 @@ export function AIChatClient() {
                   : "bg-[var(--paper)] text-[var(--ink)] border border-[var(--gold)]/20"
               }`}
             >
+              {message.role === "assistant" && message.usedKnowledge && (
+                <span className="inline-flex items-center gap-1 mb-1.5 px-2 py-0.5 rounded text-[10px] uppercase tracking-wider bg-[var(--gold)]/10 text-[var(--gold)] border border-[var(--gold)]/30">
+                  Knowledge Base
+                </span>
+              )}
               <p className="text-sm whitespace-pre-wrap">{message.content}</p>
             </div>
           </div>

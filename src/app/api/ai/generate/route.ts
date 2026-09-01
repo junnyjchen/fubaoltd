@@ -3,8 +3,14 @@ import { LLMClient, Config, HeaderUtils } from "coze-coding-dev-sdk";
 
 export async function POST(request: NextRequest) {
   try {
-    const { topic, contentType = "article", language = "en", length = "medium" } =
-      await request.json();
+    const {
+      topic,
+      contentType = "article",
+      language = "en",
+      length = "medium",
+      model = "doubao-seed-2-0-lite-260215",
+      instructions,
+    } = await request.json();
 
     if (!topic) {
       return NextResponse.json(
@@ -40,7 +46,7 @@ Guidelines:
 - Never make supernatural claims
 - Frame content as cultural heritage and tradition
 - Write in an engaging, educational tone
-- Structure with clear headings and paragraphs
+- Structure with clear headings and paragraphs${instructions ? `\n- Additional requirements: ${instructions}` : ""}
 
 Return the content in well-formatted text with proper structure.`;
 
@@ -50,7 +56,7 @@ Return the content in well-formatted text with proper structure.`;
     ];
 
     const response = await client.invoke(messages, {
-      model: "doubao-seed-2-0-lite-260215",
+      model,
       temperature: 0.7,
     });
 

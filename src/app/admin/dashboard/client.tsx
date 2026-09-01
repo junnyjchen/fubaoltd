@@ -40,6 +40,8 @@ export function AdminDashboardClient() {
     { label: 'Dashboard', href: '/admin/dashboard', active: true },
     { label: 'Orders', href: '/admin/orders' },
     { label: 'Products', href: '/admin/products' },
+    { label: 'Knowledge Base', href: '/admin/knowledge' },
+    { label: 'AI Training', href: '/admin/ai-training' },
     { label: 'Coupons', href: '/admin/coupons' },
     { label: 'Giveaways', href: '/admin/giveaways' },
     { label: 'Merchants', href: '/admin/merchants' },
