@@ -7,7 +7,7 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { emptyCart } from '@/lib/spree-compat/order-store';
-import { serializeOrder, resolveCartFromRequest } from '@/lib/spree-compat/order-serializer';
+import { serializeOrder, orderIncluded, resolveCartFromRequest } from '@/lib/spree-compat/order-serializer';
 
 export async function DELETE(request: NextRequest) {
   const cart = await resolveCartFromRequest(request);
@@ -16,5 +16,5 @@ export async function DELETE(request: NextRequest) {
   }
 
   emptyCart(cart);
-  return NextResponse.json({ data: serializeOrder(cart) });
+  return NextResponse.json({ data: serializeOrder(cart), included: orderIncluded(cart) });
 }

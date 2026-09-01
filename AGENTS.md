@@ -53,7 +53,7 @@ FuBao is a Taoist talisman cultural e-commerce site targeting overseas markets. 
 │   │   │   └── newsletter-form.tsx # Newsletter (client)
 │   │   └── shared/             # Shared components
 │   ├── hooks/
-│   │   ├── use-cart.ts         # Cart state management (localStorage)
+│   │   ├── use-cart.ts         # Cart state (server cart via Spree guest token)
 │   │   └── use-mobile.ts       # Mobile detection
 │   ├── api/                    # REST API routes
 │   │   └── v2/storefront/      # Spree Commerce API v2 compatibility layer
@@ -71,7 +71,11 @@ FuBao is a Taoist talisman cultural e-commerce site targeting overseas markets. 
 │   │                           # credit_cards / addresses
 │   └── lib/
 │       ├── api/
-│       │   └── index.ts        # Data access layer (swap for REST API later)
+│       │   └── index.ts        # Data access facade (routes reads through spree/queries)
+│       ├── spree/              # Spree integration layer (frontend side)
+│       │   ├── client.ts       # HTTP client: SPREE_API_URL env or local /api/v2/storefront
+│       │   ├── adapter.ts      # Spree JSON:API -> internal type mapping
+│       │   └── queries.ts      # Server-side queries (in-process, no HTTP)
 │       ├── spree-compat/       # Spree contract layer
 │       │   ├── types.ts        # JSON:API response types (SpreeResource etc.)
 │       │   ├── serializers.ts  # Product/Taxon/Vendor JSON:API serializers
@@ -91,8 +95,19 @@ FuBao is a Taoist talisman cultural e-commerce site targeting overseas markets. 
 
 - **Types**: `src/lib/data/types.ts` — all TypeScript interfaces
 - **Mock Data**: `src/lib/data/products.ts` — products, reviews, verification records
-- **API Layer**: `src/lib/api/index.ts` — all data access functions (getProducts, getProductBySlug, verifyCode, getQuizResult, submitOrder)
+- **API Layer**: `src/lib/api/index.ts` — data access facade; product reads route through `@/lib/spree/queries` (Spree contract layer)
 - **Rule**: Pages import from `@/lib/api`, never directly from mock files
+
+## Frontend Spree Integration (src/lib/spree/)
+
+The frontend runs on the Spree v2 contract end-to-end:
+
+- **`client.ts`** — HTTP client used by client components. `resolveBaseUrl()`: with `SPREE_API_URL` set it calls a real remote Spree; otherwise the local compatibility layer `/api/v2/storefront`. Exposes `spreeCartCreate/AddItem/SetQuantity/RemoveItem/Empty`, `spreeGetVariantId` (resolves slug → variant id), and `spreeCheckoutAddress/Delivery/Payment/Confirm/Complete`
+- **`adapter.ts`** — maps Spree JSON:API resources → internal types (Product, CartItem)
+- **`queries.ts`** — server-side product queries calling spree-compat serializers in-process (zero HTTP overhead for RSC pages)
+- **Cart flow**: `useCart` stores the guest token in localStorage (`fubao_cart_token`); the token comes from the `X-Spree-Order-Token` response header of `POST /cart`. `addItem(slug, qty, personalization)` passes personalization via Spree line-item `options`
+- **Checkout flow**: `checkout/client.tsx` walks the Spree state machine (address → delivery → complete) and redirects to `/order/[number]`; `order/[id]/page.tsx` reads the order via `getOrderDetailForOrderNumber`
+- **Key invariant**: slug/variant resolution and totals are owned by the Spree layer — the frontend never computes prices itself
 
 ## Spree Commerce v2 Compatibility Layer
 
@@ -121,7 +136,7 @@ Defined in `src/app/globals.css` and `DESIGN.md`:
 ## Key Patterns
 
 - Server Components by default, `'use client'` only for interactivity
-- Cart state via `useCart` hook (localStorage persistence)
+- Cart state via `useCart` hook (server cart + Spree guest token in localStorage)
 - Category filtering via searchParams on `/talisman`
 - Five Elements quiz uses deterministic rules (same input = same output)
 - Verification uses mock codes (FB-2026-XXXXXX format)
@@ -135,7 +150,7 @@ Defined in `src/app/globals.css` and `DESIGN.md`:
 
 ## Extension Points
 
-- Replace `lib/api/index.ts` with real REST API calls
+- Point `SPREE_API_URL` at a real Spree 5.4 instance — routes and frontend switch over without code changes
 - Add i18n (currently English only)
 - Integrate Stripe for real payments
 - Add vendor/multi-merchant support

@@ -2,7 +2,7 @@
  * Spree Commerce API v2 — Add item to cart.
  *
  * POST /api/v2/storefront/cart/add-item
- * Body: { variant_id: string, quantity: number }
+ * Body: { variant_id: string, quantity: number, options?: { personalization?: string } }
  * Header: X-Spree-Order-Token (guest) or Authorization: Bearer (account)
  *
  * Spree auto-creates a cart when none exists; the new guest token is returned
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'The access token is invalid' }, { status: 401 });
   }
 
-  let body: { variant_id?: string; quantity?: number };
+  let body: { variant_id?: string; quantity?: number; options?: { personalization?: string } };
   try {
     body = await request.json();
   } catch {
@@ -39,8 +39,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Quantity must be at least 1' }, { status: 422 });
   }
 
+  const personalization = body.options?.personalization?.trim();
   const cart = getOrCreateCart(guestToken, user?.sub, user?.email);
-  const result = addItemToCart(cart, variantId, quantity);
+  const result = addItemToCart(cart, variantId, quantity, personalization || undefined);
 
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 422 });

@@ -7,7 +7,7 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { removeLineItem } from '@/lib/spree-compat/order-store';
-import { serializeOrder, resolveCartFromRequest } from '@/lib/spree-compat/order-serializer';
+import { serializeOrder, orderIncluded, resolveCartFromRequest } from '@/lib/spree-compat/order-serializer';
 
 export async function DELETE(
   request: NextRequest,
@@ -24,5 +24,5 @@ export async function DELETE(
     return NextResponse.json({ error: `Line item ${id} not found` }, { status: 422 });
   }
 
-  return NextResponse.json({ data: serializeOrder(cart) });
+  return NextResponse.json({ data: serializeOrder(cart), included: orderIncluded(cart) });
 }

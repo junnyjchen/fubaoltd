@@ -13,6 +13,7 @@ import { products } from '@/lib/data/products';
 import { validateCoupon } from '@/lib/coupons/coupon-store';
 import type {
   SpreeAddressState,
+  SpreeLineItemOptions,
   SpreeLineItemState,
   SpreeOrderState,
   SpreePaymentMethod,
@@ -175,9 +176,10 @@ export type CartMutationResult = { ok: true } | { ok: false; error: string };
 export function addItemToCart(
   order: SpreeOrderState,
   variantId: string,
-  quantity: number
+  quantity: number,
+  personalization?: string
 ): CartMutationResult {
-  const item = addItem(order, variantId, quantity);
+  const item = addItem(order, variantId, quantity, personalization ? { personalization } : undefined);
   if (!item) return { ok: false, error: `Variant ${variantId} not found` };
   return { ok: true };
 }
@@ -228,12 +230,17 @@ export function addItem(
   order: SpreeOrderState,
   variantId: string,
   quantity: number,
+  options?: SpreeLineItemOptions,
 ): SpreeLineItemState | null {
   // Spree variant ids map 1:1 to product ids in this compatibility layer
   const product = products.find((_, index) => String(index + 1) === variantId);
   if (!product) return null;
 
-  const existing = order.lineItems.find((item) => item.variantId === variantId);
+  const personalization = options?.personalization?.trim() || undefined;
+  // Same variant + same personalization merge quantities (Spree line item options semantics)
+  const existing = order.lineItems.find(
+    (item) => item.variantId === variantId && (item.options?.personalization || undefined) === personalization,
+  );
   if (existing) {
     existing.quantity += quantity;
     recalculateTotals(order);
@@ -250,6 +257,7 @@ export function addItem(
     price: product.price,
     quantity,
     vendorId: product.slug.includes('protection') || product.slug.includes('home-blessing') ? '1' : '2',
+    options: personalization ? { personalization } : undefined,
   };
   order.lineItems.push(lineItem);
   recalculateTotals(order);

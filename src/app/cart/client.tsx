@@ -38,7 +38,7 @@ export function CartClient() {
   });
 
   const subtotal = cartItems.reduce((sum, item) => {
-    const price = item.product?.price ?? 0;
+    const price = item.product?.price ?? item.price ?? 0;
     return sum + price * item.quantity;
   }, 0);
 
@@ -69,15 +69,15 @@ export function CartClient() {
                     href={`/talisman/${item.slug}`}
                     className="font-serif text-base text-ink transition-colors hover:text-cinnabar"
                   >
-                    {item.product?.name ?? item.slug}
+                    {item.product?.name ?? item.name ?? item.slug}
                   </Link>
-                  {item.personalizedInfo && (
+                  {(item.personalizedInfo || item.personalization) && (
                     <p className="mt-1 text-xs text-smoke italic">
-                      Personalized: {item.personalizedInfo}
+                      Personalized: {item.personalizedInfo || item.personalization}
                     </p>
                   )}
                   <p className="mt-1 text-sm text-cinnabar">
-                    ${item.product?.price.toFixed(2)}
+                    ${(item.product?.price ?? item.price ?? 0).toFixed(2)}
                   </p>
                 </div>
 
@@ -104,7 +104,9 @@ export function CartClient() {
 
                   <div className="flex items-center gap-4">
                     <span className="text-sm font-medium text-ink">
-                      ${((item.product?.price ?? 0) * item.quantity).toFixed(2)}
+                      ${(
+                        (item.product?.price ?? item.price ?? 0) * item.quantity
+                      ).toFixed(2)}
                     </span>
                     <button
                       onClick={() => removeItem(item.slug)}

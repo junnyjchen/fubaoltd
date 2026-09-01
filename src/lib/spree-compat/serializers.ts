@@ -111,6 +111,8 @@ export function serializeProduct(product: Product): SpreeResource {
       tagline: product.tagline,
       category: product.category,
       rating: product.rating,
+      review_count: product.reviewCount,
+      is_personalized: product.isPersonalized ?? false,
       ritual_info: product.ritual_info,
       image_key: product.image_key,
     },

@@ -32,7 +32,13 @@ export interface Product {
 export interface CartItem {
   slug: string;
   quantity: number;
+  /** Legacy localStorage cart personalization note */
   personalizedInfo?: string;
+  /** Spree server cart snapshot (populated by useCart) */
+  name?: string;
+  price?: number;
+  imageKey?: string | null;
+  personalization?: string;
 }
 
 export interface CartState {

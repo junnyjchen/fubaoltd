@@ -144,19 +144,24 @@ export async function getWishes(): Promise<Wish[]> {
 
 // ============ Products ============
 
+// ============ Products (Spree Commerce v2 contract layer) ============
+
+import { spreeProductToListProduct, spreeProductToDetail } from "@/lib/spree/adapter";
+import { listSpreeProducts, getSpreeProductBySlug } from "@/lib/spree/queries";
+
 export async function getProducts(category?: string): Promise<Product[]> {
-  if (category) {
-    return products.filter((p) => p.category === category);
-  }
-  return products;
+  const spreeProducts = await listSpreeProducts(category);
+  return spreeProducts.map(spreeProductToListProduct);
 }
 
 export async function getFeaturedProducts(limit = 3): Promise<Product[]> {
-  return products.slice(0, limit);
+  const all = await getProducts();
+  return all.slice(0, limit);
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
-  return products.find((p) => p.slug === slug) || null;
+  const spreeProduct = await getSpreeProductBySlug(slug);
+  return spreeProduct ? spreeProductToDetail(spreeProduct) : null;
 }
 
 export async function getProductReviews(slug: string): Promise<Review[]> {
@@ -254,13 +259,13 @@ export async function getQuizResult(input: QuizInput): Promise<QuizResult> {
     Earth: ["Grounded stability", "Nurturing care", "Trustworthy nature"],
   };
 
-  // Recommended products based on element
+  // Recommended products based on element (slugs must exist in the catalog)
   const recommendationMap: Record<FiveElement, string> = {
     Metal: "protection-talisman",
-    Wood: "health-talisman",
-    Water: "career-talisman",
+    Wood: "energy-blessing-box",
+    Water: "career-success-talisman",
     Fire: "home-blessing-talisman",
-    Earth: "birth-chart-talisman",
+    Earth: "personalized-birth-chart-talisman",
   };
 
   const recommendedSlug = recommendationMap[dominant] || "protection-talisman";
@@ -313,6 +318,80 @@ export async function submitOrder(input: {
 
 export async function getOrderById(id: string): Promise<Order | null> {
   return orders.find((o) => o.id === id) || null;
+}
+
+/**
+ * Read an order back through the Spree compatibility layer by order number
+ * (e.g. "R983752676"). Returns a normalized shape for the order
+ * confirmation page: line items with slugs, totals, addresses.
+ */
+export async function getOrderDetailForOrderNumber(
+  number: string
+): Promise<{
+  number: string;
+  email: string;
+  state: string;
+  paymentState: string;
+  shipmentState: string;
+  itemTotal: number;
+  shipTotal: number;
+  promoTotal: number;
+  total: number;
+  createdAt: string;
+  completedAt: string | null;
+  shipAddress: {
+    firstname: string;
+    lastname: string;
+    address1: string;
+    city: string;
+    zipcode: string;
+    countryIso: string;
+    phone: string;
+  } | null;
+  lineItems: {
+    id: string;
+    name: string;
+    slug: string;
+    quantity: number;
+    price: number;
+    options?: { personalization?: string } | null;
+  }[];
+} | null> {
+  const { getOrderByNumber } = await import("@/lib/spree-compat/order-store");
+  const order = getOrderByNumber(number);
+  if (!order) return null;
+  return {
+    number: order.number,
+    email: order.email,
+    state: order.state,
+    paymentState: order.paymentStatus,
+    shipmentState: order.shipmentStatus,
+    itemTotal: order.itemTotal,
+    shipTotal: order.shipTotal,
+    promoTotal: order.promoTotal,
+    total: order.itemTotal + order.shipTotal - order.promoTotal,
+    createdAt: order.createdAt,
+    completedAt: order.completedAt ?? null,
+    shipAddress: order.shipAddress
+      ? {
+          firstname: order.shipAddress.firstname,
+          lastname: order.shipAddress.lastname,
+          address1: order.shipAddress.address1,
+          city: order.shipAddress.city,
+          zipcode: order.shipAddress.zipcode,
+          countryIso: order.shipAddress.country_iso,
+          phone: order.shipAddress.phone,
+        }
+      : null,
+    lineItems: order.lineItems.map((li) => ({
+      id: li.id,
+      name: li.name,
+      slug: li.slug,
+      quantity: li.quantity,
+      price: li.price,
+      options: li.options ?? null,
+    })),
+  };
 }
 
 // ============ Image URLs ============

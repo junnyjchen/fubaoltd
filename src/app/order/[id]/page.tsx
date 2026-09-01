@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { getOrderDetailForOrderNumber } from '@/lib/api';
 
 export const metadata: Metadata = {
   title: 'Order Confirmation',
@@ -12,6 +13,7 @@ interface Props {
 
 export default async function OrderPage({ params }: Props) {
   const { id } = await params;
+  const order = await getOrderDetailForOrderNumber(id);
 
   return (
     <div className="bg-paper py-16">
@@ -32,6 +34,40 @@ export default async function OrderPage({ params }: Props) {
               Order ID
             </p>
             <p className="mt-1 font-mono text-lg text-cinnabar">{id}</p>
+            {order ? (
+              <div className="mt-4 space-y-2 border-t border-border pt-4 text-left">
+                <div className="flex justify-between text-sm">
+                  <span className="text-smoke">Status</span>
+                  <span className="font-medium capitalize text-ink">
+                    {order.state}
+                  </span>
+                </div>
+                {order.lineItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex justify-between text-sm"
+                  >
+                    <span className="text-ink">
+                      {item.name} × {item.quantity}
+                    </span>
+                    <span className="text-smoke">
+                      ${(item.price * item.quantity).toFixed(2)}
+                    </span>
+                  </div>
+                ))}
+                <div className="flex justify-between border-t border-border pt-2 text-sm">
+                  <span className="font-medium text-ink">Total</span>
+                  <span className="font-medium text-cinnabar">
+                    ${order.total.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <p className="mt-4 text-xs text-smoke">
+                A confirmation email with tracking details will follow once
+                your order ships from Hong Kong.
+              </p>
+            )}
           </div>
           <p className="mt-6 text-sm text-smoke">
             You will receive a confirmation email with tracking details once

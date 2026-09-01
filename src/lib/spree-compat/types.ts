@@ -54,6 +54,10 @@ export type SpreeOrderStatus =
   | 'confirm'
   | 'complete';
 
+export interface SpreeLineItemOptions {
+  personalization?: string;
+}
+
 export interface SpreeLineItemState {
   id: string;
   variantId: string;
@@ -64,6 +68,7 @@ export interface SpreeLineItemState {
   price: number;
   quantity: number;
   vendorId: string;
+  options?: SpreeLineItemOptions;
 }
 
 export interface SpreeAddressState {

@@ -91,6 +91,7 @@ export function serializeLineItem(
       currency: 'USD',
       slug: item.slug,
       vendor_id: item.vendorId,
+      options: item.options ? { personalization: item.options.personalization } : null,
       adjustment_total: '0.0',
       additional_tax_total: '0.0',
       included_tax_total: '0.0',
