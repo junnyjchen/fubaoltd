@@ -44,6 +44,7 @@ export function AdminDashboardClient() {
     { label: 'AI Training', href: '/admin/ai-training' },
     { label: 'Coupons', href: '/admin/coupons' },
     { label: 'Giveaways', href: '/admin/giveaways' },
+    { label: 'Free Blessing', href: '/admin/blessing' },
     { label: 'Merchants', href: '/admin/merchants' },
   ];
 

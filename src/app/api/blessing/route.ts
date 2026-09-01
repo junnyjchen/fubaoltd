@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import { products } from '@/lib/data/products';
 import {
+  getBlessingConfig,
   getBlessingClaim,
   recordBlessingClaim,
   attachCartToken,
+  checkBlessingAvailability,
   type BlessingClaim,
   type BlessingMethod,
 } from '@/lib/blessing/blessing-store';
@@ -16,7 +18,7 @@ import {
 } from '@/lib/spree-compat/order-store';
 import type { SpreeOrderState } from '@/lib/spree-compat/types';
 
-export const BLESSING_SLUG = 'free-blessing-talisman';
+const BLESSING_SLUG = 'free-blessing-talisman';
 
 /**
  * Idempotently make sure a (guest) cart contains the free blessing line item.
@@ -40,14 +42,26 @@ function ensureBlessingInCart(
   return { token: order.guestToken, order };
 }
 
+/**
+ * Anon-safe: public config + availability so the page can render window /
+ * quota / paused states before login. Personal claim only when logged in.
+ */
 export async function GET() {
   try {
+    const availability = checkBlessingAvailability();
+    const config = getBlessingConfig();
     const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-    const claim = getBlessingClaim(session.sub);
-    return NextResponse.json({ success: true, claim });
+    const claim = session ? getBlessingClaim(session.sub) : null;
+    return NextResponse.json({
+      success: true,
+      config,
+      availability: {
+        status: availability.status,
+        claimable: availability.status === 'open',
+        message: availability.message,
+      },
+      claim,
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed';
     return NextResponse.json({ success: false, error: message }, { status: 500 });
@@ -86,6 +100,7 @@ export async function POST(request: Request) {
 
     // Idempotent "continue" path — same method re-requested (e.g. returning
     // visitor clicking "Proceed to Checkout" again): just re-prepare the cart.
+    // Exempt from window/quota so an in-flight claim can always be finished.
     if (existing) {
       if (method === 'mail') {
         const token = body.cartToken ?? existing.cartToken ?? null;
@@ -99,6 +114,15 @@ export async function POST(request: Request) {
         });
       }
       return NextResponse.json({ success: true, claim: existing, resumed: true });
+    }
+
+    // New claims must respect the activity window / quota / enabled flag.
+    const availability = checkBlessingAvailability();
+    if (!availability.claimable) {
+      return NextResponse.json(
+        { success: false, error: availability.message },
+        { status: 400 }
+      );
     }
 
     let claim: BlessingClaim;

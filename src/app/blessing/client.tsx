@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Gift, MapPin, Mail, Copy, Check, Loader2, ArrowRight } from 'lucide-react';
+import { Gift, MapPin, Mail, Copy, Check, Loader2, ArrowRight, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/lib/auth/auth-context';
 import { saveSpreeCartToken, getSpreeCartToken } from '@/lib/spree/client';
@@ -13,15 +13,32 @@ type Method = 'pickup' | 'mail';
 interface Claim {
   userId: string;
   method: Method;
-  claimedAt: string;
+  createdAt: string;
   pickupCode?: string;
   cartToken?: string | null;
+}
+
+interface BlessingConfig {
+  active: boolean;
+  startAt: string | null;
+  endAt: string | null;
+  totalQuota: number;
+  pickupAddress: string;
+  pickupHours: string;
+  note: string;
+}
+
+interface Availability {
+  status: 'open' | 'inactive' | 'not_started' | 'ended' | 'full';
+  message: string;
 }
 
 export function BlessingClaimFlow() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const [claim, setClaim] = useState<Claim | null>(null);
+  const [config, setConfig] = useState<BlessingConfig | null>(null);
+  const [availability, setAvailability] = useState<Availability | null>(null);
   const [claimLoading, setClaimLoading] = useState(true);
   const [submitting, setSubmitting] = useState<Method | null>(null);
   const [copied, setCopied] = useState(false);
@@ -30,21 +47,16 @@ export function BlessingClaimFlow() {
     let cancelled = false;
     async function load() {
       if (isLoading) return;
-      if (!user) {
-        if (!cancelled) {
-          setClaim(null);
-          setClaimLoading(false);
-        }
-        return;
-      }
       try {
         const res = await fetch('/api/blessing');
         const data = await res.json();
-        if (!cancelled) {
-          setClaim(res.ok && data.success ? (data.claim as Claim | null) : null);
+        if (!cancelled && res.ok && data.success) {
+          setConfig(data.config as BlessingConfig);
+          setAvailability(data.availability as Availability);
+          setClaim((data.claim as Claim | null) ?? null);
         }
       } catch {
-        // network hiccup — leave unclaimed; the POST path re-checks server-side
+        // network hiccup — leave defaults; the POST path re-checks server-side
       } finally {
         if (!cancelled) setClaimLoading(false);
       }
@@ -78,9 +90,11 @@ export function BlessingClaimFlow() {
         const data = await res.json();
         if (!res.ok || !data.success) {
           toast.error(data.error ?? 'Could not claim your blessing');
+          if (data.availability) setAvailability(data.availability as Availability);
           return;
         }
         setClaim(data.claim as Claim);
+        if (data.availability) setAvailability(data.availability as Availability);
         if (method === 'mail' && data.cartToken) {
           saveSpreeCartToken(data.cartToken as string);
           toast.success('Free blessing added to your cart — pay only shipping');
@@ -122,6 +136,17 @@ export function BlessingClaimFlow() {
     }
   }, [router]);
 
+  const formatWindow = (iso: string | null) =>
+    iso
+      ? new Date(iso).toLocaleString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : null;
+
   // Checking auth/claim state
   if (isLoading || claimLoading) {
     return (
@@ -129,6 +154,43 @@ export function BlessingClaimFlow() {
         <div className="flex items-center justify-center gap-3 py-12 text-sm text-smoke">
           <Loader2 className="h-4 w-4 animate-spin" />
           <span>Checking eligibility…</span>
+        </div>
+      </section>
+    );
+  }
+
+  // Activity closed — takes precedence over the sign-in prompt (visitors
+  // should see the activity is not claimable before creating an account)
+  if (availability && availability.status !== 'open' && !claim) {
+    const closedCopy: Record<string, { title: string }> = {
+      inactive: { title: 'The Blessing Ceremony Is Paused' },
+      not_started: { title: 'The Blessing Has Not Begun' },
+      ended: { title: 'This Round of Blessings Has Ended' },
+      full: { title: 'All Blessings in This Round Are Claimed' },
+    };
+    const copy = closedCopy[availability.status] ?? { title: 'Unavailable' };
+    return (
+      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-md border border-border bg-card p-10 text-center">
+          <Clock className="mx-auto h-8 w-8 text-smoke" strokeWidth={1.25} />
+          <h2 className="mt-4 font-serif text-2xl font-light tracking-wide text-ink">
+            {copy.title}
+          </h2>
+          <p className="mt-3 text-xs leading-relaxed text-smoke">
+            {availability.message}
+          </p>
+          {(config?.startAt || config?.endAt) && availability.status === 'not_started' && (
+            <p className="mt-2 text-xs text-smoke">
+              Opens {formatWindow(config?.startAt ?? null)}
+            </p>
+          )}
+          <Link
+            href="/talisman"
+            className="mt-6 inline-flex items-center gap-2 text-xs font-medium tracking-[0.2em] text-cinnabar underline-offset-4 hover:underline"
+          >
+            BROWSE TALISMANS
+            <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.5} />
+          </Link>
         </div>
       </section>
     );
@@ -186,9 +248,9 @@ export function BlessingClaimFlow() {
             <p className="flex items-start gap-2">
               <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-cinnabar/70" strokeWidth={1.5} />
               <span>
-                Qingyun Temple — 8 Temple Street, Yau Ma Tei, Hong Kong
+                {config?.pickupAddress || 'Qingyun Temple — 8 Temple Street, Yau Ma Tei, Hong Kong'}
                 <br />
-                Daily 9:00 – 17:00 (UTC+8)
+                {config?.pickupHours || 'Daily 9:00 – 17:00 (UTC+8)'}
               </span>
             </p>
             <p>
@@ -257,14 +319,14 @@ export function BlessingClaimFlow() {
           </h3>
           <p className="text-[10px] uppercase tracking-[0.25em] text-gold">Completely Free</p>
           <p className="mt-4 flex-1 text-xs leading-relaxed text-smoke">
-            Collect your talisman in person at Qingyun Temple, Yau Ma Tei,
-            Hong Kong. We will reserve it under a unique pickup code for 30
-            days.
+            Collect your talisman in person at{' '}
+            {config?.pickupAddress || 'Qingyun Temple, Yau Ma Tei, Hong Kong'}. We
+            will reserve it under a unique pickup code for 30 days.
           </p>
           <ul className="mt-4 space-y-1.5 text-xs text-smoke">
             <li>· Hand it to you at the temple gate</li>
             <li>· No payment of any kind</li>
-            <li>· Daily 9:00 – 17:00</li>
+            <li>· {config?.pickupHours || 'Daily 9:00 – 17:00'}</li>
           </ul>
           <button
             type="button"
@@ -315,7 +377,12 @@ export function BlessingClaimFlow() {
         </div>
       </div>
 
-      <p className="mx-auto mt-8 max-w-md text-center text-[10px] leading-relaxed text-smoke/70">
+      {config?.note && (
+        <p className="mx-auto mt-8 max-w-md text-center text-xs leading-relaxed text-smoke">
+          {config.note}
+        </p>
+      )}
+      <p className="mx-auto mt-4 max-w-md text-center text-[10px] leading-relaxed text-smoke/70">
         One free blessing per account. Offered as a cultural keepsake — for
         entertainment purposes only.
       </p>
