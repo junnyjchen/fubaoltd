@@ -58,6 +58,14 @@ export function Footer() {
                   Gift Sets
                 </Link>
               </li>
+              <li>
+                <Link
+                  href="/artisans"
+                  className="text-sm text-smoke transition-colors hover:text-ink"
+                >
+                  Our Artisans
+                </Link>
+              </li>
             </ul>
           </div>
 

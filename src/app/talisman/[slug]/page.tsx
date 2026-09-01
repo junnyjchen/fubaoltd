@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getProductBySlug, getProducts } from '@/lib/api';
+import { getProductBySlug, getProducts, getArtisanForProduct } from '@/lib/api';
 import { ProductDetailClient } from './client';
 import { reviews } from '@/lib/data/products';
 import { Star, Truck, ShieldCheck } from 'lucide-react';
@@ -39,6 +39,7 @@ export default async function ProductDetailPage({ params }: Props) {
   }
 
   const variant = getTalismanVariant(product.slug);
+  const artisan = await getArtisanForProduct(slug);
 
   return (
     <div className="bg-paper py-12 sm:py-16">
@@ -72,6 +73,20 @@ export default async function ProductDetailPage({ params }: Props) {
               {product.name}
             </h1>
             <p className="mt-3 text-sm leading-relaxed text-smoke">{product.tagline}</p>
+
+            {/* Artisan attribution */}
+            {artisan && (
+              <p className="mt-3 text-xs text-smoke">
+                Hand-drawn by{' '}
+                <Link
+                  href="/artisans"
+                  className="text-cinnabar underline-offset-4 transition-colors hover:text-ink hover:underline"
+                >
+                  {artisan.name}
+                </Link>
+                {artisan.certification === 'gold' ? ' — Gold Certified' : ' — Certified'} · {artisan.city ? `${artisan.city}, ` : ''}{artisan.country}
+              </p>
+            )}
 
             {/* Rating */}
             <div className="mt-5 flex items-center gap-2">
@@ -128,7 +143,9 @@ export default async function ProductDetailPage({ params }: Props) {
                 Blessing Ritual
               </h3>
               <p className="text-xs leading-relaxed text-smoke">
-                Hand-drawn by Master Chen at Qingyun Temple, Hong Kong, following the traditional seven-step consecration process.
+                {artisan
+                  ? `Hand-drawn by ${artisan.name} in ${artisan.city || artisan.country}, following the traditional seven-step consecration process.`
+                  : 'Hand-drawn following the traditional seven-step consecration process.'}
               </p>
               <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                 <div>

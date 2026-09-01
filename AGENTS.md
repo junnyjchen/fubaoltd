@@ -43,6 +43,7 @@ FuBao is a Taoist talisman cultural e-commerce site targeting overseas markets. 
 │   │   │   └── client.tsx      # Checkout form (client)
 │   │   ├── order/[id]/page.tsx # Order confirmation
 │   │   ├── about/page.tsx      # About page
+│   │   ├── artisans/page.tsx   # Artisan/vendor showcase (Spree vendors)
 │   │   └── faq/page.tsx        # FAQ page
 │   ├── components/
 │   │   ├── ui/                 # shadcn/ui components
@@ -108,6 +109,7 @@ The frontend runs on the Spree v2 contract end-to-end:
 - **Cart flow**: `useCart` stores the guest token in localStorage (`fubao_cart_token`); the token comes from the `X-Spree-Order-Token` response header of `POST /cart`. `addItem(slug, qty, personalization)` passes personalization via Spree line-item `options`. The hook also exposes `totals` (server-owned cart totals) and `applyPromo(code)` which returns `{ok, error}` — cart page renders the promo input and discount line from these
 - **Checkout flow**: `checkout/client.tsx` walks the Spree state machine (address → delivery → payment → confirm → complete) and redirects to `/order/[number]`. Payment methods are fetched from `GET /checkout/payment_methods` (stripe / crypto) and rendered as radio options — never hardcoded. The order summary uses server-owned `useCart().totals` (item/ship/promo/total + `couponCode`); after completion `resetCart()` drops the guest token. `order/[id]/page.tsx` reads the order via `getOrderDetailForOrderNumber` and renders the full breakdown: line items (with personalization options), subtotal, shipping, promo discount line, ship-to address, total
 - **Account flow**: `account/client.tsx` fetches real order history from `GET /api/v2/storefront/account/orders` (session cookie auth) and links each order to `/order/[number]`
+- **Artisan (vendor) showcase**: `getArtisans()` / `getArtisanForProduct(slug)` in `lib/api` read the Spree vendor contract in-process (approved merchants from `@/lib/merchant/merchant-store`, slug→vendor via `PRODUCT_VENDOR_MAP`). `/artisans` page renders vendor cards (certification badge, city, product count, deep links); product detail shows "Hand-drawn by <vendor>" linking to `/artisans`. Vendor JSON:API attributes follow Spree (`about_us`, `certification`, `city`)
 - **Key invariant**: slug/variant resolution and totals are owned by the Spree layer — the frontend never computes prices itself
 
 ## Spree Commerce v2 Compatibility Layer

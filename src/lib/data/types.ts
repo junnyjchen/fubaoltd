@@ -124,3 +124,21 @@ export interface Review {
   content: string;
   date: string;
 }
+
+// ─── Artisan (Vendor) Types ───
+
+export interface Artisan {
+  /** Spree numeric vendor id */
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  city: string;
+  country: string;
+  specialties: string[];
+  certification: string;
+  rating: number;
+  /** Number of talismans this artisan crafts */
+  productCount: number;
+  productSlugs: string[];
+}

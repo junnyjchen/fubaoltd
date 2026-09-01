@@ -168,6 +168,64 @@ export async function getProductReviews(slug: string): Promise<Review[]> {
   return reviews.filter((r) => r.productSlug === slug);
 }
 
+// ============ Artisans (Spree vendors) ============
+
+import { merchants } from "@/lib/merchant/merchant-store";
+import { vendorIdForProduct } from "@/lib/spree-compat/serializers";
+import type { Artisan } from "@/lib/data/types";
+
+export async function getArtisans(): Promise<Artisan[]> {
+  const approved = merchants.filter((m) => m.status === "approved");
+
+  return approved.map((m) => {
+    const productSlugs = products
+      .filter((p) => vendorIdForProduct(p) === m.id)
+      .map((p) => p.slug);
+
+    return {
+      id: m.id,
+      slug: m.shopSlug,
+      name: m.shopName,
+      description: m.description,
+      city: m.city ?? "",
+      country: m.country,
+      specialties: m.specialties,
+      certification: m.certification,
+      rating: m.rating,
+      productCount: productSlugs.length,
+      productSlugs,
+    };
+  });
+}
+
+export async function getArtisanForProduct(slug: string): Promise<Artisan | null> {
+  const product = products.find((p) => p.slug === slug);
+  if (!product) return null;
+  const vendorId = vendorIdForProduct(product);
+  const merchant = merchants.find(
+    (m) => m.id === vendorId && m.status === "approved"
+  );
+  if (!merchant) return null;
+
+  const productSlugs = products
+    .filter((p) => vendorIdForProduct(p) === merchant.id)
+    .map((p) => p.slug);
+
+  return {
+    id: merchant.id,
+    slug: merchant.shopSlug,
+    name: merchant.shopName,
+    description: merchant.description,
+    city: merchant.city ?? "",
+    country: merchant.country,
+    specialties: merchant.specialties,
+    certification: merchant.certification,
+    rating: merchant.rating,
+    productCount: productSlugs.length,
+    productSlugs,
+  };
+}
+
 // ============ Verification ============
 
 export async function verifyCode(
