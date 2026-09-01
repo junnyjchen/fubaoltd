@@ -103,6 +103,7 @@ export function createOrder(email?: string): SpreeOrderState {
     paymentTotal: 0,
     promoTotal: 0,
     adjustmentTotal: 0,
+    couponCode: null,
     createdAt: new Date().toISOString(),
     completedAt: null,
     paymentStatus: 'balance_due',
@@ -198,6 +199,7 @@ export function setLineItemQuantity(
 export function emptyCart(order: SpreeOrderState): void {
   order.lineItems = [];
   order.promoTotal = 0;
+  order.couponCode = null;
   recalculateTotals(order);
 }
 
@@ -215,7 +217,29 @@ export function applyPromoCode(
   } else {
     order.promoTotal = validation.discount;
   }
+  order.couponCode = code.toUpperCase();
   return { ok: true };
+}
+
+/**
+ * Re-apply a stored coupon after a cart mutation (item added / quantity
+ * changed / line removed). Spree recomputes promotions on every order update:
+ * if the coupon no longer applies (e.g. cart total fell below its threshold),
+ * it is silently dropped.
+ */
+export function revalidatePromo(order: SpreeOrderState): void {
+  if (!order.couponCode) return;
+  const validation = validateCoupon(order.couponCode, order.itemTotal, order.userId ?? undefined);
+  if (!validation.valid || !validation.coupon) {
+    order.couponCode = null;
+    order.promoTotal = 0;
+    return;
+  }
+  if (validation.coupon.type === 'free_shipping') {
+    order.promoTotal = Math.min(validation.coupon.value, order.shipTotal);
+  } else {
+    order.promoTotal = validation.discount;
+  }
 }
 
 function recalculateTotals(order: SpreeOrderState): void {
@@ -224,6 +248,7 @@ function recalculateTotals(order: SpreeOrderState): void {
   );
   const rate = SHIPPING_RATES.find((r) => r.id === order.shippingRateId);
   order.shipTotal = order.lineItems.length > 0 ? (rate ? rate.cost : SHIPPING_COST) : 0;
+  revalidatePromo(order);
 }
 
 export function addItem(

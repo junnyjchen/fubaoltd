@@ -10,13 +10,23 @@ import {
   spreeSetQuantity,
   spreeRemoveLineItem,
   spreeEmptyCart,
+  spreeApplyPromoCode,
   getSpreeCartToken,
   saveSpreeCartToken,
   clearSpreeCartToken,
+  SpreeError,
   type SpreeCart,
 } from '@/lib/spree/client';
 
 const LEGACY_CART_KEY = 'fubao-cart';
+
+export interface CartTotals {
+  itemTotal: number;
+  shipTotal: number;
+  promoTotal: number;
+  total: number;
+  couponCode: string | null;
+}
 
 /**
  * Spree Commerce guest cart flow:
@@ -32,6 +42,7 @@ export function useCart() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [cartNumber, setCartNumber] = useState<string | null>(null);
+  const [totals, setTotals] = useState<CartTotals | null>(null);
   const tokenRef = useRef<string | null>(null);
   const lineItemIdsRef = useRef<Map<string, string>>(new Map());
 
@@ -39,10 +50,18 @@ export function useCart() {
     if (!cart) {
       setItems([]);
       setCartNumber(null);
+      setTotals(null);
       lineItemIdsRef.current.clear();
       return;
     }
     setCartNumber(cart.number);
+    setTotals({
+      itemTotal: cart.itemTotal,
+      shipTotal: cart.shipTotal,
+      promoTotal: cart.promoTotal,
+      total: cart.total,
+      couponCode: cart.couponCode,
+    });
     const idMap = new Map<string, string>();
     setItems(
       cart.lineItems.map((li) => {
@@ -223,6 +242,7 @@ export function useCart() {
     clearSpreeCartToken();
     setItems([]);
     setCartNumber(null);
+    setTotals(null);
     lineItemIdsRef.current.clear();
   }, []);
 
@@ -237,6 +257,32 @@ export function useCart() {
     }
   }, [applyCartState]);
 
+  /**
+   * Spree PATCH /cart/apply-promo-code. Returns a user-readable error message
+   * on failure (invalid / expired / threshold-not-met coupon).
+   */
+  const applyPromo = useCallback(
+    async (code: string): Promise<{ ok: boolean; error?: string }> => {
+      const token = tokenRef.current ?? (await ensureToken());
+      if (!token) return { ok: false, error: 'Cart unavailable. Please refresh and try again.' };
+      const trimmed = code.trim();
+      if (!trimmed) return { ok: false, error: 'Enter a promo code.' };
+      setIsSyncing(true);
+      try {
+        const cart = await spreeApplyPromoCode(token, trimmed);
+        applyCartState(cart);
+        return { ok: true };
+      } catch (err) {
+        if (err instanceof SpreeError) return { ok: false, error: err.message };
+        return { ok: false, error: 'Could not apply promo code. Please try again.' };
+      } finally {
+        setIsSyncing(false);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [ensureToken, applyCartState]
+  );
+
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
 
   return {
@@ -244,12 +290,14 @@ export function useCart() {
     isLoaded,
     isSyncing,
     cartNumber,
+    totals,
     addItem,
     updateQuantity,
     removeItem,
     clearCart,
     resetCart,
     refresh,
+    applyPromo,
     totalItems,
   };
 }

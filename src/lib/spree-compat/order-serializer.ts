@@ -42,6 +42,7 @@ export function serializeOrder(order: SpreeOrderState): SpreeResource {
       shipment_state: order.shipmentStatus,
       item_count: order.lineItems.reduce((sum, li) => sum + li.quantity, 0),
       promo_total: order.promoTotal.toFixed(2),
+      coupon_code: order.couponCode,
       display_item_total: formatMoney(order.itemTotal),
       display_total: formatMoney(orderTotal(order)),
       display_ship_total: formatMoney(order.shipTotal),

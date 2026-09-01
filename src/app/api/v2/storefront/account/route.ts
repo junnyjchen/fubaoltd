@@ -8,9 +8,9 @@
 
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { createUser, getUserById, updateUser } from '@/lib/auth/user-store';
-import { verifyToken } from '@/lib/auth/jwt';
+import { createUser, updateUser } from '@/lib/auth/user-store';
 import { listOrdersForUser } from '@/lib/spree-compat/order-store';
+import { requireSpreeUser } from '@/lib/spree-compat/account-auth';
 
 type AccountAttributes = {
   email?: unknown;
@@ -39,16 +39,6 @@ function serializeUser(id: string, email: string, name: string, createdAt: strin
       relationships: {},
     },
   };
-}
-
-/** Resolve Spree Bearer token (our JWT access token) to a user. */
-async function requireSpreeUser(request: NextRequest) {
-  const authHeader = request.headers.get('Authorization') ?? '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-  if (!token) return null;
-  const payload = await verifyToken(token);
-  if (!payload?.sub) return null;
-  return getUserById(payload.sub);
 }
 
 /** POST — create a new account (guest → registered). */

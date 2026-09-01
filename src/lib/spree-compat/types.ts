@@ -100,6 +100,7 @@ export interface SpreeOrderState {
   paymentTotal: number;
   promoTotal: number;
   adjustmentTotal: number;
+  couponCode: string | null;
   createdAt: string;
   completedAt: string | null;
   paymentStatus: string;

@@ -1,13 +1,28 @@
 'use client';
 
+import { useState } from 'react';
 import { useCart } from '@/hooks/use-cart';
 import { products } from '@/lib/data/products';
 import Link from 'next/link';
-import { Trash2, Minus, Plus, ShoppingBag } from 'lucide-react';
+import { Trash2, Minus, Plus, ShoppingBag, TicketPercent } from 'lucide-react';
 import { TalismanSVG, getTalismanVariant } from '@/components/shared/talisman-svg';
 
 export function CartClient() {
-  const { items, isLoaded, updateQuantity, removeItem } = useCart();
+  const { items, isLoaded, isSyncing, totals, updateQuantity, removeItem, applyPromo } = useCart();
+  const [promoInput, setPromoInput] = useState('');
+  const [promoError, setPromoError] = useState<string | null>(null);
+
+  const handleApplyPromo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!promoInput.trim()) return;
+    setPromoError(null);
+    const result = await applyPromo(promoInput);
+    if (result.ok) {
+      setPromoInput('');
+    } else {
+      setPromoError(result.error ?? 'Invalid promo code');
+    }
+  };
 
   if (!isLoaded) {
     return (
@@ -37,10 +52,14 @@ export function CartClient() {
     return { ...item, product };
   });
 
-  const subtotal = cartItems.reduce((sum, item) => {
+  // Totals are owned by the Spree layer — fall back to local math only while
+  // the server cart response has not landed yet.
+  const subtotal = totals?.itemTotal ?? cartItems.reduce((sum, item) => {
     const price = item.product?.price ?? item.price ?? 0;
     return sum + price * item.quantity;
   }, 0);
+  const discount = totals?.promoTotal ?? 0;
+  const hasCoupon = Boolean(totals?.couponCode);
 
   return (
     <div>
@@ -131,6 +150,56 @@ export function CartClient() {
             ${subtotal.toFixed(2)} <span className="text-sm text-smoke">USD</span>
           </span>
         </div>
+
+        {hasCoupon && discount > 0 && (
+          <div className="mt-3 flex items-center justify-between">
+            <span className="flex items-center gap-2 text-sm text-gold">
+              <TicketPercent className="h-3.5 w-3.5" />
+              Promo {totals?.couponCode}
+            </span>
+            <span className="text-sm text-gold">-${discount.toFixed(2)}</span>
+          </div>
+        )}
+        {hasCoupon && discount > 0 && (
+          <div className="mt-2 flex items-center justify-between border-t border-border pt-2">
+            <span className="text-sm text-smoke">After discount</span>
+            <span className="text-base font-light text-ink">
+              ${(Math.max(subtotal - discount, 0)).toFixed(2)} <span className="text-sm text-smoke">USD</span>
+            </span>
+          </div>
+        )}
+
+        {/* Promo code */}
+        {hasCoupon ? (
+          <p className="mt-4 text-xs tracking-wide text-smoke">
+            Promo code applied to this order
+          </p>
+        ) : (
+          <form onSubmit={handleApplyPromo} className="mt-4">
+            <div className="flex">
+              <input
+                type="text"
+                value={promoInput}
+                onChange={(e) => {
+                  setPromoInput(e.target.value);
+                  setPromoError(null);
+                }}
+                placeholder="Promo code"
+                className="w-full border border-border bg-transparent px-3 py-2 text-sm text-ink placeholder:text-smoke/50 focus:border-gold focus:outline-none"
+                aria-label="Promo code"
+              />
+              <button
+                type="submit"
+                disabled={isSyncing || !promoInput.trim()}
+                className="whitespace-nowrap border border-l-0 border-border px-4 text-sm tracking-wide text-ink transition-colors hover:border-gold hover:text-gold disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {isSyncing ? 'Applying...' : 'Apply'}
+              </button>
+            </div>
+            {promoError && <p className="mt-2 text-xs text-cinnabar">{promoError}</p>}
+          </form>
+        )}
+
         <p className="mt-2 text-xs text-smoke">
           Shipping calculated at checkout
         </p>

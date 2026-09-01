@@ -38,6 +38,7 @@ export interface SpreeCart {
   total: number;
   currency: string;
   email: string | null;
+  couponCode: string | null;
   lineItems: SpreeCartLineItem[];
 }
 
@@ -282,6 +283,7 @@ function cartFromJson(json: JsonApiResponse, fallbackToken: string): SpreeCart {
     total: num(a.total),
     currency: String(a.currency ?? 'USD'),
     email: (a.email as string | null) || null,
+    couponCode: (a.coupon_code as string | null) ?? null,
     lineItems,
   };
 }
@@ -467,15 +469,6 @@ export async function spreeGetShippingRates(token: string): Promise<SpreeShippin
     days: (r.attributes.days as string | null) ?? null,
     selected: Boolean(r.attributes.selected),
   }));
-}
-
-export async function spreeApplyCoupon(token: string, code: string): Promise<SpreeCart> {
-  const json = await request('/cart/apply-promo-code', {
-    method: 'PATCH',
-    token,
-    body: { coupon_code: code },
-  });
-  return cartFromJson(json, token);
 }
 
 export async function spreeAddItem(

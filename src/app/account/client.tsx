@@ -2,17 +2,84 @@
 
 import { useAuth } from '@/lib/auth/auth-context';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { Copy, Check, PackageOpen } from 'lucide-react';
+
+interface AccountOrder {
+  id: string;
+  number: string;
+  state: string;
+  paymentState: string | null;
+  itemCount: number;
+  total: number;
+  createdAt: string;
+}
+
+const stateColors: Record<string, string> = {
+  complete: 'text-emerald-600',
+  paid: 'text-emerald-600',
+  cart: 'text-muted-foreground',
+  address: 'text-muted-foreground',
+  delivery: 'text-muted-foreground',
+  payment: 'text-muted-foreground',
+  confirm: 'text-muted-foreground',
+  canceled: 'text-destructive',
+};
 
 export function AccountPageClient() {
   const { user, isLoading, logout } = useAuth();
   const router = useRouter();
+  const [orders, setOrders] = useState<AccountOrder[] | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !user) {
       router.push('/login?redirect=/account');
     }
   }, [user, isLoading, router]);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    fetch('/api/v2/storefront/account/orders', {
+      headers: { Accept: 'application/vnd.api+json' },
+    })
+      .then((res) => (res.ok ? res.json() : { data: [] }))
+      .then((json: { data?: Array<{ id: string; attributes?: Record<string, unknown> }> }) => {
+        if (cancelled) return;
+        const list = (json.data ?? []).map((o) => {
+          const a = o.attributes ?? {};
+          return {
+            id: o.id,
+            number: String(a.number ?? o.id),
+            state: String(a.state ?? ''),
+            paymentState: (a.payment_state as string | null) ?? null,
+            itemCount: Number(a.item_count ?? 0),
+            total: Number.parseFloat(String(a.total ?? '0')) || 0,
+            createdAt: String(a.created_at ?? ''),
+          };
+        });
+        if (!cancelled) setOrders(list);
+      })
+      .catch(() => {
+        if (!cancelled) setOrders([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  const copyReferral = async () => {
+    if (!user) return;
+    try {
+      await navigator.clipboard.writeText(user.referralCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard unavailable */
+    }
+  };
 
   if (isLoading) {
     return (
@@ -30,6 +97,8 @@ export function AccountPageClient() {
     gold: 'bg-yellow-500/10 text-yellow-600',
     platinum: 'bg-purple-500/10 text-purple-600',
   };
+
+  const completedOrders = orders?.filter((o) => o.state === 'complete') ?? null;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
@@ -71,7 +140,7 @@ export function AccountPageClient() {
       {/* Quick Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div className="bg-card border border-border rounded-lg p-4 text-center">
-          <div className="text-2xl font-bold text-foreground">0</div>
+          <div className="text-2xl font-bold text-foreground">{orders === null ? '—' : orders.length}</div>
           <div className="text-sm text-muted-foreground">Orders</div>
         </div>
         <div className="bg-card border border-border rounded-lg p-4 text-center">
@@ -88,25 +157,89 @@ export function AccountPageClient() {
         </div>
       </div>
 
+      {/* Order History */}
+      <div id="orders" className="bg-card border border-border rounded-lg p-6 mb-8 scroll-mt-24">
+        <h2 className="font-serif text-xl text-foreground mb-4">Order History</h2>
+        {orders === null ? (
+          <p className="text-sm text-muted-foreground py-4">Loading orders...</p>
+        ) : orders.length === 0 ? (
+          <div className="py-8 text-center">
+            <PackageOpen className="mx-auto mb-3 h-8 w-8 text-muted-foreground/30" />
+            <p className="text-sm text-muted-foreground">No orders yet</p>
+            <Link href="/talisman" className="mt-3 inline-flex text-sm text-accent underline underline-offset-4">
+              Browse talismans
+            </Link>
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {orders.slice(0, 8).map((o) => (
+              <Link
+                key={o.id}
+                href={`/order/${o.number}`}
+                className="flex items-center justify-between py-3 group"
+              >
+                <div>
+                  <div className="text-sm font-medium text-foreground group-hover:text-accent transition-colors">
+                    {o.number}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : ''}
+                    {' · '}{o.itemCount} {o.itemCount === 1 ? 'item' : 'items'}
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className={`text-xs uppercase tracking-wide ${stateColors[o.state] ?? 'text-muted-foreground'}`}>
+                    {o.state}
+                  </span>
+                  <span className="text-sm text-foreground">${o.total.toFixed(2)}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+        {completedOrders !== null && completedOrders.length > 0 && (
+          <p className="mt-4 text-xs text-muted-foreground">
+            {completedOrders.length} completed {completedOrders.length === 1 ? 'order' : 'orders'}
+          </p>
+        )}
+      </div>
+
       {/* Actions */}
       <div className="bg-card border border-border rounded-lg p-6">
         <h2 className="font-serif text-xl text-foreground mb-4">Quick Actions</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <button className="p-3 border border-border rounded-md text-sm text-foreground hover:bg-muted transition-colors text-left">
+          <a
+            href="#orders"
+            className="p-3 border border-border rounded-md text-sm text-foreground hover:bg-muted transition-colors text-left"
+          >
             <span className="block font-medium">Orders</span>
             <span className="text-xs text-muted-foreground">View order history</span>
-          </button>
-          <button className="p-3 border border-border rounded-md text-sm text-foreground hover:bg-muted transition-colors text-left">
+          </a>
+          <Link
+            href="/talisman"
+            className="p-3 border border-border rounded-md text-sm text-foreground hover:bg-muted transition-colors text-left"
+          >
             <span className="block font-medium">Favorites</span>
-            <span className="text-xs text-muted-foreground">Saved items</span>
-          </button>
-          <button className="p-3 border border-border rounded-md text-sm text-foreground hover:bg-muted transition-colors text-left">
-            <span className="block font-medium">Wallet</span>
-            <span className="text-xs text-muted-foreground">Balance & top-up</span>
-          </button>
-          <button className="p-3 border border-border rounded-md text-sm text-foreground hover:bg-muted transition-colors text-left">
-            <span className="block font-medium">Referrals</span>
-            <span className="text-xs text-muted-foreground">Invite & earn</span>
+            <span className="text-xs text-muted-foreground">Browse talismans</span>
+          </Link>
+          <Link
+            href="/ai-chat"
+            className="p-3 border border-border rounded-md text-sm text-foreground hover:bg-muted transition-colors text-left"
+          >
+            <span className="block font-medium">AI Assistant</span>
+            <span className="text-xs text-muted-foreground">Talisman guidance</span>
+          </Link>
+          <button
+            onClick={copyReferral}
+            className="p-3 border border-border rounded-md text-sm text-foreground hover:bg-muted transition-colors text-left"
+          >
+            <span className="block font-medium flex items-center gap-1.5">
+              Referrals
+              {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5 text-muted-foreground" />}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {copied ? 'Code copied!' : 'Copy referral code'}
+            </span>
           </button>
         </div>
       </div>

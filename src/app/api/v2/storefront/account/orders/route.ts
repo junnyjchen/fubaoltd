@@ -9,16 +9,12 @@
 
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { getUserById } from '@/lib/auth/user-store';
-import { verifyToken } from '@/lib/auth/jwt';
+import { requireSpreeUser } from '@/lib/spree-compat/account-auth';
 import { listOrdersForUser, getOrderByNumber } from '@/lib/spree-compat/order-store';
 import { serializeOrder } from '@/lib/spree-compat/order-serializer';
 
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get('Authorization') ?? '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-  const payload = token ? await verifyToken(token) : null;
-  const user = payload?.sub ? await getUserById(payload.sub) : null;
+  const user = await requireSpreeUser(request);
   if (!user) {
     return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
   }

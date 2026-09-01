@@ -9,9 +9,8 @@
 
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { getUserById } from '@/lib/auth/user-store';
-import { verifyToken } from '@/lib/auth/jwt';
 import { listOrdersForUser } from '@/lib/spree-compat/order-store';
+import { requireSpreeUser } from '@/lib/spree-compat/account-auth';
 import type { SpreeResource } from '@/lib/spree-compat/types';
 
 function serializeAddress(id: string, address: NonNullable<Awaited<ReturnType<typeof listOrdersForUser>>[number]['shipAddress']>): SpreeResource {
@@ -33,10 +32,7 @@ function serializeAddress(id: string, address: NonNullable<Awaited<ReturnType<ty
 }
 
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get('Authorization') ?? '';
-  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
-  const payload = token ? await verifyToken(token) : null;
-  const user = payload?.sub ? await getUserById(payload.sub) : null;
+  const user = await requireSpreeUser(request);
   if (!user) {
     return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
   }

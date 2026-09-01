@@ -102,11 +102,12 @@ FuBao is a Taoist talisman cultural e-commerce site targeting overseas markets. 
 
 The frontend runs on the Spree v2 contract end-to-end:
 
-- **`client.ts`** — HTTP client used by client components. `resolveBaseUrl()`: with `SPREE_API_URL` set it calls a real remote Spree; otherwise the local compatibility layer `/api/v2/storefront`. Exposes `spreeCartCreate/AddItem/SetQuantity/RemoveItem/Empty`, `spreeGetVariantId` (resolves slug → variant id), and `spreeCheckoutAddress/Delivery/Payment/Confirm/Complete`
+- **`client.ts`** — HTTP client used by client components. `resolveBaseUrl()`: with `SPREE_API_URL` set it calls a real remote Spree; otherwise the local compatibility layer `/api/v2/storefront`. Exposes `spreeCartCreate/AddItem/SetQuantity/RemoveItem/Empty`, `spreeGetVariantId` (resolves slug → variant id), `spreeApplyPromoCode`, and `spreeCheckoutAddress/Delivery/Payment/Confirm/Complete`. `SpreeCart` carries `itemTotal/shipTotal/promoTotal/total/couponCode`
 - **`adapter.ts`** — maps Spree JSON:API resources → internal types (Product, CartItem)
 - **`queries.ts`** — server-side product queries calling spree-compat serializers in-process (zero HTTP overhead for RSC pages)
-- **Cart flow**: `useCart` stores the guest token in localStorage (`fubao_cart_token`); the token comes from the `X-Spree-Order-Token` response header of `POST /cart`. `addItem(slug, qty, personalization)` passes personalization via Spree line-item `options`
+- **Cart flow**: `useCart` stores the guest token in localStorage (`fubao_cart_token`); the token comes from the `X-Spree-Order-Token` response header of `POST /cart`. `addItem(slug, qty, personalization)` passes personalization via Spree line-item `options`. The hook also exposes `totals` (server-owned cart totals) and `applyPromo(code)` which returns `{ok, error}` — cart page renders the promo input and discount line from these
 - **Checkout flow**: `checkout/client.tsx` walks the Spree state machine (address → delivery → complete) and redirects to `/order/[number]`; `order/[id]/page.tsx` reads the order via `getOrderDetailForOrderNumber`
+- **Account flow**: `account/client.tsx` fetches real order history from `GET /api/v2/storefront/account/orders` (session cookie auth) and links each order to `/order/[number]`
 - **Key invariant**: slug/variant resolution and totals are owned by the Spree layer — the frontend never computes prices itself
 
 ## Spree Commerce v2 Compatibility Layer
@@ -116,9 +117,9 @@ storefront (or any Spree client) works out of the box. Swap `spree-compat/`
 stores with real `SPREE_API_URL` calls later — routes keep the same contract.
 
 - **Response format**: JSON:API `{data: [{id, type, attributes, relationships}], meta, links}`
-- **Auth**: `X-Spree-Order-Token` header for guest carts; `Authorization: Bearer <JWT>` (via `POST /spree_oauth/token`, password grant) for account endpoints
+- **Auth**: `X-Spree-Order-Token` header for guest carts; account endpoints accept `Authorization: Bearer <JWT>` (via `POST /spree_oauth/token`, password grant) **or** the site's httpOnly session cookie as fallback (`account-auth.ts` → `resolveAccountAuth`), so browser fetches work without token plumbing
 - **Checkout state machine**: `cart → address → delivery → payment → confirm → complete`; step endpoints (address/delivery/payment) auto-advance once data is present; `confirm` mirrors Spree confirm→complete semantics; `complete` is idempotent
-- **Coupon engine**: `apply-promo-code` reuses `@/lib/coupons/coupon-store` (percentage / fixed / free_shipping types); totals recompute on every mutation
+- **Coupon engine**: `apply-promo-code` reuses `@/lib/coupons/coupon-store` (percentage / fixed / free_shipping types; WELCOME10 / SAVE5 / FREESHIP / VIP20). The applied `coupon_code` persists on the order and is serialized (`coupon_code` + `promo_total` attributes); every cart mutation revalidates the coupon against the new item total and recomputes the discount (min-order checks re-run)
 - **State persistence**: `order-store.ts` keeps in-memory Maps on `globalThis` so all routes share state across module instances in dev
 - **Users**: reuses `@/lib/auth/user-store` (demo@fubao.com / demo123); JWT issued by `@/lib/auth/jwt`
 
