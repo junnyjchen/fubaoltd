@@ -5,6 +5,7 @@ import { useCart } from '@/hooks/use-cart';
 import { useAuth } from '@/lib/auth/auth-context';
 import { useScrollPosition } from '@/hooks/use-scroll-reveal';
 import { ShoppingBag, Menu, X, User } from 'lucide-react';
+import { LanguageSwitcher } from '@/components/layout/language-switcher';
 import { useState, useEffect } from 'react';
 
 const navLinks = [
@@ -74,8 +75,9 @@ export function Header() {
             ))}
           </nav>
 
-          {/* Cart + User + Mobile Toggle */}
+          {/* Cart + User + Language + Mobile Toggle */}
           <div className="flex items-center gap-4">
+            <LanguageSwitcher />
             {user ? (
               <Link
                 href="/account"

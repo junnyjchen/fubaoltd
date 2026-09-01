@@ -3,6 +3,7 @@ import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { FontPreload } from '@/components/layout/font-preload';
 import { AuthProvider } from '@/lib/auth/auth-context';
+import { LocaleProvider } from '@/lib/i18n/locale-context';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -40,11 +41,13 @@ export default function RootLayout({
     <html lang="en">
       <body className="min-h-screen bg-paper text-ink antialiased">
         <FontPreload />
-        <AuthProvider>
-          <Header />
-          <main className="min-h-[calc(100vh-4rem)]">{children}</main>
-          <Footer />
-        </AuthProvider>
+        <LocaleProvider>
+          <AuthProvider>
+            <Header />
+            <main className="min-h-[calc(100vh-4rem)]">{children}</main>
+            <Footer />
+          </AuthProvider>
+        </LocaleProvider>
       </body>
     </html>
   );

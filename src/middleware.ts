@@ -4,8 +4,7 @@ import { verifyToken } from '@/lib/auth/jwt';
 const protectedPaths = [
   '/account',
   '/admin',
-  '/merchant',
-  '/checkout',
+  '/merchant/dashboard',
 ];
 
 // Public pages that live inside protected prefixes — no auth required
@@ -15,7 +14,7 @@ const publicWhitelist = [
 ];
 
 const adminPaths = ['/admin'];
-const merchantPaths = ['/merchant'];
+const merchantPaths = ['/merchant/dashboard'];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

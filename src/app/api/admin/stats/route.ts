@@ -28,7 +28,10 @@ export async function GET() {
           { id: 'FB-ORD-002', customer: 'Michael L.', total: 49.9, status: 'shipped', date: '2025-02-28' },
           { id: 'FB-ORD-003', customer: 'Emily C.', total: 89.9, status: 'delivered', date: '2025-02-25' },
         ],
-        topProducts: products.slice(0, 5).map(p => ({ name: p.name, sales: Math.floor(Math.random() * 50), revenue: (p.price * Math.floor(Math.random() * 50)).toFixed(2) })),
+        topProducts: products.slice(0, 5).map((p, i) => {
+          const sales = [48, 35, 27, 19, 12][i] ?? 5;
+          return { name: p.name, sales, revenue: (p.price * sales).toFixed(2) };
+        }),
       },
     });
   } catch (error) {

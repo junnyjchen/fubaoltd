@@ -60,6 +60,25 @@ users.set('craftsman@fubao.com', {
   passwordHash: craftsmanHash,
 });
 
+// Seed demo admin account
+const adminHash = await hashPassword('admin123');
+users.set('admin@fubao.com', {
+  id: 'usr-admin-001',
+  email: 'admin@fubao.com',
+  name: 'FuBao Admin',
+  role: 'admin',
+  status: 'active',
+  emailVerified: true,
+  createdAt: '2024-01-01T00:00:00Z',
+  updatedAt: '2024-01-01T00:00:00Z',
+  points: 0,
+  level: 'bronze',
+  referralCode: 'FBADM001',
+  walletBalance: 0,
+  walletCurrency: 'USD',
+  passwordHash: adminHash,
+});
+
 export async function createUser(
   email: string,
   password: string,
