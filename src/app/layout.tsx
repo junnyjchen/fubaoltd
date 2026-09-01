@@ -9,6 +9,7 @@ import { LocaleProvider } from '@/lib/i18n/locale-context';
 import './globals.css';
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.COZE_PROJECT_DOMAIN_DEFAULT || 'https://fubao.co'),
   title: {
     default: 'FuBao — Hand-drawn Taoist Talismans',
     template: '%s | FuBao',

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getArticleBySlug } from "@/lib/api";
+import { ShareMenu } from "@/components/shared/share-menu";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -18,6 +19,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${article.title} | FuBao`,
     description: article.excerpt,
+    openGraph: {
+      title: `${article.title} | FuBao`,
+      description: article.excerpt,
+      type: "article",
+      url: `/articles/${article.slug}`,
+    },
   };
 }
 
@@ -149,8 +156,13 @@ export default async function ArticleDetailPage({ params }: Props) {
         {/* Divider */}
         <div className="border-t border-[var(--gold)]/20 mt-12 mb-8" />
 
-        {/* Footer */}
-        <div className="text-center">
+        {/* Share + Footer */}
+        <div className="flex flex-col items-center gap-6">
+          <ShareMenu
+            title={article.title}
+            subtitle="FuBao Journal"
+            path={`/articles/${article.slug}`}
+          />
           <Link
             href="/articles"
             className="inline-block px-6 py-3 text-sm rounded-lg border border-[var(--gold)]/30 text-[var(--ink)] hover:bg-[var(--jade)] transition-colors"

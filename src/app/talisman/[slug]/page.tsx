@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { TalismanSVG, getTalismanVariant } from '@/components/shared/talisman-svg';
 import { FavoriteButton } from '@/components/shared/favorite-button';
 import { TrackView } from '@/components/shared/track-view';
+import { ShareMenu } from '@/components/shared/share-menu';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -26,6 +27,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: product.name,
     description: product.tagline,
     openGraph: {
+      title: `${product.name} | FuBao`,
+      description: product.tagline,
+      url: `/talisman/${product.slug}`,
+    },
+    twitter: {
+      card: 'summary',
       title: `${product.name} | FuBao`,
       description: product.tagline,
     },
@@ -117,9 +124,15 @@ export default async function ProductDetailPage({ params }: Props) {
             {/* Add to Cart */}
             <ProductDetailClient product={product} />
 
-            {/* Wishlist */}
-            <div className="mt-3">
+            {/* Wishlist + Share */}
+            <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-3">
               <FavoriteButton slug={product.slug} variant="detail" />
+              <ShareMenu
+                title={product.name}
+                subtitle={product.tagline}
+                path={`/talisman/${product.slug}`}
+                variant="icon"
+              />
             </div>
 
             {/* History tracking (silent) */}
