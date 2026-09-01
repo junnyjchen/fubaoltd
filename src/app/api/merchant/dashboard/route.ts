@@ -44,7 +44,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    if (error instanceof Error && error.message === 'Not authenticated') {
+    if (error instanceof Error && error.message === 'Unauthorized') {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }

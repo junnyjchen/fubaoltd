@@ -14,7 +14,13 @@ export async function GET() {
     }
 
     return NextResponse.json({ success: true, data: { merchant } });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

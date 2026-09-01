@@ -109,18 +109,18 @@ export default function MerchantDashboardClient() {
     } finally {
       setLoading(false);
     }
-  }, [status, user]);
+  }, [isLoading, user]);
 
   useEffect(() => {
-    if (status === 'loading') return;
-    if (status === 'unauthenticated') {
+    if (isLoading) return;
+    if (!user) {
       router.replace('/merchant/login');
       return;
     }
     loadAll();
-  }, [status, router, loadAll]);
+  }, [isLoading, user, router, loadAll]);
 
-  if (status === 'loading' || (loading && !stats)) {
+  if (isLoading || (loading && !stats)) {
     return (
       <div className="min-h-screen bg-paper flex items-center justify-center">
         <p className="text-smoke font-serif text-lg">Loading your shop…</p>

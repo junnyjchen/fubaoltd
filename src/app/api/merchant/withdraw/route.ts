@@ -8,11 +8,12 @@ import {
 
 // GET /api/merchant/withdraw - list merchant withdrawals
 export async function GET() {
-  const user = await requireAuth();
-  if (!user) {
+  let user: Awaited<ReturnType<typeof requireAuth>>;
+  try {
+    user = await requireAuth();
+  } catch {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-
   const merchant = getMerchantByUserId(user.sub);
   if (!merchant) {
     return NextResponse.json({ error: 'Merchant not found' }, { status: 404 });
@@ -24,11 +25,12 @@ export async function GET() {
 
 // POST /api/merchant/withdraw - request a withdrawal
 export async function POST(request: NextRequest) {
-  const user = await requireAuth();
-  if (!user) {
+  let user: Awaited<ReturnType<typeof requireAuth>>;
+  try {
+    user = await requireAuth();
+  } catch {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-
   const merchant = getMerchantByUserId(user.sub);
   if (!merchant) {
     return NextResponse.json({ error: 'Merchant not found' }, { status: 404 });

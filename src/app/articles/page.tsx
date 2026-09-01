@@ -22,8 +22,14 @@ const categoryColors: Record<string, string> = {
   culture: "bg-[var(--cinnabar)]/5 text-[var(--ink)]",
 };
 
-export default async function ArticlesPage() {
-  const articles = await getArticles();
+interface Props {
+  searchParams: Promise<{ category?: string }>;
+}
+
+export default async function ArticlesPage({ searchParams }: Props) {
+  const { category } = await searchParams;
+  const articles = await getArticles(category);
+  const categoryKeys = Object.keys(categoryLabels);
 
   return (
     <main className="min-h-screen bg-[var(--paper)] pt-24 pb-16">
@@ -43,19 +49,30 @@ export default async function ArticlesPage() {
         <div className="flex flex-wrap justify-center gap-2 mb-12">
           <Link
             href="/articles"
-            className="px-4 py-2 text-sm rounded-full border border-[var(--gold)]/30 text-[var(--ink)] bg-[var(--jade)] hover:bg-[var(--paper)] transition-colors"
+            className={`px-4 py-2 text-sm rounded-full border transition-colors ${
+              !category
+                ? "border-[var(--cinnabar)]/40 text-[var(--cinnabar)] bg-[var(--cinnabar)]/10"
+                : "border-[var(--gold)]/30 text-[var(--smoke)] hover:bg-[var(--jade)] hover:text-[var(--ink)]"
+            }`}
           >
             All
           </Link>
-          {Object.entries(categoryLabels).map(([key, label]) => (
-            <Link
-              key={key}
-              href={`/articles?category=${key}`}
-              className="px-4 py-2 text-sm rounded-full border border-[var(--gold)]/30 text-[var(--smoke)] hover:bg-[var(--jade)] hover:text-[var(--ink)] transition-colors"
-            >
-              {label}
-            </Link>
-          ))}
+          {categoryKeys.map((key) => {
+            const selected = category === key;
+            return (
+              <Link
+                key={key}
+                href={`/articles?category=${key}`}
+                className={`px-4 py-2 text-sm rounded-full border transition-colors ${
+                  selected
+                    ? "border-[var(--cinnabar)]/40 text-[var(--cinnabar)] bg-[var(--cinnabar)]/10"
+                    : "border-[var(--gold)]/30 text-[var(--smoke)] hover:bg-[var(--jade)] hover:text-[var(--ink)]"
+                }`}
+              >
+                {categoryLabels[key]}
+              </Link>
+            );
+          })}
         </div>
 
         {/* Articles Grid */}

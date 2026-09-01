@@ -146,6 +146,13 @@ Defined in `src/app/globals.css` and `DESIGN.md`:
 - Verification uses mock codes (FB-2026-XXXXXX format)
 - AI Assistant (`/ai-chat`): SSE streaming (`/api/ai/chat`), model selector from `/api/ai/models` (doubao-seed/lite/pro), markdown rendering (react-markdown + remark-gfm), RAG over knowledge base (`usedKnowledge` meta frame after content frames, `data: [DONE]` terminator). System prompt injects the live product catalog via `getProducts()` so answers link real slugs (`[Protection Talisman](/talisman/protection-talisman)`); compliance rules enforced (no supernatural claims, "For entertainment purposes only"). Client controls: stop generation (AbortController), copy message, regenerate last answer, clear chat. Abort-safe stream: controller closed after cancel → enqueue guarded by try/catch
 
+## Known Auth Patterns (Important)
+
+- `requireAuth(request)` **throws** `'Unauthorized'`; `requireRole(request, role)` **throws** `'Forbidden'` — route handlers must catch and map to 401/403 (see `api/merchant/*`, `api/admin/stats` for the canonical pattern)
+- `useAuth()` provides `{ user, isLoading, login, register, logout, refreshUser }` — there is NO `status` field; client guards use `isLoading`/`user`
+- Merchant area: login at `/merchant/login` (site auth) → `/merchant/dashboard`; unauthed pages redirect via `?redirect=` param. Merchant role required for `api/merchant/*` (403 otherwise). Demo accounts: merchant@fubao.com / merchant123, admin@fubao.com / admin123
+- Admin area: `/admin/dashboard` (role `admin`)
+
 ## Commands
 
 - `pnpm dev` — Start dev server

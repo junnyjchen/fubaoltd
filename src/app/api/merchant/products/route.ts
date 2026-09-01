@@ -22,7 +22,13 @@ export async function GET() {
       success: true,
       data: getMerchantProducts(merchant.id),
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
     return NextResponse.json(
       { success: false, error: 'Failed to load products' },
       { status: 500 }
@@ -72,7 +78,13 @@ export async function POST(request: NextRequest) {
       { success: true, data: result, message: 'Product created (pending review)' },
       { status: 201 }
     );
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
     return NextResponse.json(
       { success: false, error: 'Failed to create product' },
       { status: 500 }
@@ -110,7 +122,13 @@ export async function PUT(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, data: result });
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
     return NextResponse.json(
       { success: false, error: 'Failed to update product' },
       { status: 500 }
