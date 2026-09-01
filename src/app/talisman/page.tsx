@@ -5,6 +5,7 @@ import type { ProductCategory } from '@/lib/data/types';
 import { Star, SearchX } from 'lucide-react';
 import { TalismanSVG, getTalismanVariant } from '@/components/shared/talisman-svg';
 import { RevealSection } from '@/components/shared/reveal-section';
+import { FavoriteButton } from '@/components/shared/favorite-button';
 import { SearchBox } from './search-box';
 
 export const metadata: Metadata = {
@@ -125,13 +126,14 @@ export default async function TalismanPage({ searchParams }: Props) {
                   href={`/talisman/${product.slug}`}
                   className="group block"
                 >
-                  <div className="aspect-[3/4] overflow-hidden bg-jade transition-all duration-500">
+                  <div className="relative aspect-[3/4] overflow-hidden bg-jade transition-all duration-500">
                     <div className="flex h-full w-full items-center justify-center p-8 transition-transform duration-700 group-hover:scale-[1.03]">
                       <TalismanSVG
                         variant={variant}
                         className="h-full w-auto max-w-[180px] opacity-80 transition-opacity duration-500 group-hover:opacity-100"
                       />
                     </div>
+                    <FavoriteButton slug={product.slug} />
                   </div>
                   <div className="mt-5">
                     <p className="mb-1 text-[10px] font-medium uppercase tracking-[0.2em] text-smoke/60">

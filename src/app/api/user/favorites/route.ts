@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 
-// In-memory store (replace with database)
-const favorites: Map<string, Set<string>> = new Map();
+// Store persisted on globalThis so all route modules share one instance in dev
+// (module-scoped state is NOT shared across route modules — see AGENTS.md).
+const globalStore = globalThis as unknown as {
+  __fubaoFavorites?: Map<string, Set<string>>;
+};
+const favorites: Map<string, Set<string>> = (globalStore.__fubaoFavorites ??=
+  new Map());
 
 export async function GET() {
   try {

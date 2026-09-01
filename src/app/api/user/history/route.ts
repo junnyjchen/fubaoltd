@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 
-interface HistoryItem {
+export interface HistoryItem {
   productSlug: string;
   productName: string;
   visitedAt: string;
 }
 
-// In-memory store
-const browsingHistory: Map<string, HistoryItem[]> = new Map();
+// Store persisted on globalThis so all route modules share one instance in dev
+// (module-scoped state is NOT shared across route modules — see AGENTS.md).
+const globalStore = globalThis as unknown as {
+  __fubaoHistory?: Map<string, HistoryItem[]>;
+};
+const browsingHistory: Map<string, HistoryItem[]> = (globalStore.__fubaoHistory ??=
+  new Map());
 
 export async function GET() {
   try {

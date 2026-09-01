@@ -7,6 +7,7 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { products } from '@/lib/data/products';
 import { verifyToken, type TokenPayload } from '@/lib/auth/jwt';
+import { getSession } from '@/lib/auth/session';
 import {
   PAYMENT_METHODS,
   SHIPPING_RATES,
@@ -133,9 +134,18 @@ export function readOrderToken(request: NextRequest): string | null {
 export async function resolveRequestUser(
   request: NextRequest
 ): Promise<TokenPayload | null> {
+  // 1. Spree-style Bearer token.
   const bearer = request.headers.get('Authorization');
-  if (!bearer?.startsWith('Bearer ')) return null;
-  return verifyToken(bearer.slice(7));
+  if (bearer?.startsWith('Bearer ')) {
+    const payload = await verifyToken(bearer.slice(7));
+    if (payload) return payload;
+  }
+
+  // 2. FuBao session cookie (httpOnly — browser same-origin requests).
+  const session = await getSession();
+  if (session) return session;
+
+  return null;
 }
 
 /** Resolve the current cart: guest token first, else signed-in user's cart. */

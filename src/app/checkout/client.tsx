@@ -14,6 +14,7 @@ import {
   spreeCheckoutComplete,
   spreeGetShippingRates,
   spreeGetPaymentMethods,
+  spreeAssociateCart,
   getSpreeCartToken,
   type SpreePaymentMethod,
 } from '@/lib/spree/client';
@@ -96,6 +97,10 @@ export function CheckoutClient() {
     setLoading(true);
     setError(null);
     try {
+      // Claim the guest cart for the signed-in buyer (if any) so the order
+      // shows up in account history. Best-effort — never blocks checkout.
+      await spreeAssociateCart(cartToken);
+
       // Spree checkout state machine: address -> delivery -> payment -> confirm -> complete
       await spreeCheckoutAddress(cartToken, {
         email: form.email,

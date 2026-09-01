@@ -6,6 +6,8 @@ import { reviews } from '@/lib/data/products';
 import { Star, Truck, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { TalismanSVG, getTalismanVariant } from '@/components/shared/talisman-svg';
+import { FavoriteButton } from '@/components/shared/favorite-button';
+import { TrackView } from '@/components/shared/track-view';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -114,6 +116,14 @@ export default async function ProductDetailPage({ params }: Props) {
 
             {/* Add to Cart */}
             <ProductDetailClient product={product} />
+
+            {/* Wishlist */}
+            <div className="mt-3">
+              <FavoriteButton slug={product.slug} variant="detail" />
+            </div>
+
+            {/* History tracking (silent) */}
+            <TrackView slug={product.slug} name={product.name} />
 
             {/* Shipping & Ritual Info */}
             <div className="mt-8 space-y-4 border-t border-border pt-6">

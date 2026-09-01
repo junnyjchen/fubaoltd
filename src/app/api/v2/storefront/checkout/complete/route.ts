@@ -14,6 +14,7 @@ import {
   advanceCheckoutSteps,
 } from '@/lib/spree-compat/order-store';
 import { serializeOrder, orderIncluded } from '@/lib/spree-compat/order-serializer';
+import { notifyOrderCompleted } from '@/lib/notifications/order-notify';
 
 export async function PATCH(request: NextRequest) {
   const token = request.headers.get('X-Spree-Order-Token');
@@ -46,6 +47,10 @@ export async function PATCH(request: NextRequest) {
       { status: 422 }
     );
   }
+
+  // Notify the buyer when the cart belongs to a logged-in user (guest carts
+  // have no account to notify). Deduped by order number.
+  notifyOrderCompleted(cart);
 
   return NextResponse.json({ data: serializeOrder(cart), included: orderIncluded(cart) });
 }

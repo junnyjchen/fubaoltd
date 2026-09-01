@@ -4,8 +4,9 @@ import Link from 'next/link';
 import { useCart } from '@/hooks/use-cart';
 import { useAuth } from '@/lib/auth/auth-context';
 import { useScrollPosition } from '@/hooks/use-scroll-reveal';
-import { ShoppingBag, Menu, X, User } from 'lucide-react';
+import { ShoppingBag, Menu, X, User, Heart } from 'lucide-react';
 import { LanguageSwitcher } from '@/components/layout/language-switcher';
+import { NotificationsBell } from '@/components/layout/notifications-bell';
 import { useState, useEffect } from 'react';
 
 const navLinks = [
@@ -76,8 +77,16 @@ export function Header() {
             ))}
           </nav>
 
-          {/* Cart + User + Language + Mobile Toggle */}
+          {/* Cart + User + Notifications + Wishlist + Language + Mobile Toggle */}
           <div className="flex items-center gap-4">
+            <NotificationsBell />
+            <Link
+              href="/wishlist"
+              className="text-ink transition-colors duration-300 hover:text-cinnabar"
+              aria-label="Wishlist"
+            >
+              <Heart className="h-5 w-5" />
+            </Link>
             <LanguageSwitcher />
             {user ? (
               <Link

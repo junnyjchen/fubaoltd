@@ -15,6 +15,7 @@ import {
   completeOrder,
 } from '@/lib/spree-compat/order-store';
 import { serializeOrder, orderIncluded } from '@/lib/spree-compat/order-serializer';
+import { notifyOrderCompleted } from '@/lib/notifications/order-notify';
 
 export async function PATCH(request: NextRequest) {
   const token = request.headers.get('X-Spree-Order-Token');
@@ -43,6 +44,10 @@ export async function PATCH(request: NextRequest) {
       { status: 422 }
     );
   }
+
+  // The confirm step often finishes the order (Spree confirm→complete
+  // semantics) — notify here too. Deduped by order number.
+  notifyOrderCompleted(order);
 
   return NextResponse.json({ data: serializeOrder(order), included: orderIncluded(order) });
 }

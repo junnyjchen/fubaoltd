@@ -42,6 +42,8 @@ FuBao is a Taoist talisman cultural e-commerce site targeting overseas markets. 
 │   │   │   ├── page.tsx        # Checkout (server)
 │   │   │   └── client.tsx      # Checkout form (client)
 │   │   ├── order/[id]/page.tsx # Order confirmation
+│   │   ├── wishlist/           # Saved favorites (server page + client grid)
+│   │   ├── notifications/      # Notification center (server page + client list)
 │   │   ├── about/page.tsx      # About page
 │   │   ├── artisans/page.tsx   # Artisan/vendor showcase (Spree vendors)
 │   │   └── faq/page.tsx        # FAQ page
@@ -51,8 +53,9 @@ FuBao is a Taoist talisman cultural e-commerce site targeting overseas markets. 
 │   │   │   ├── header.tsx      # Site header (client)
 │   │   │   ├── footer.tsx      # Site footer (server)
 │   │   │   ├── font-preload.tsx # Font preconnect (client)
+│   │   │   ├── notifications-bell.tsx # Header bell + unread badge (client)
 │   │   │   └── newsletter-form.tsx # Newsletter (client)
-│   │   └── shared/             # Shared components
+│   │   └── shared/             # Shared components (favorite-button, track-view, product-card…)
 │   ├── hooks/
 │   │   ├── use-cart.ts         # Cart state (server cart via Spree guest token)
 │   │   └── use-mobile.ts       # Mobile detection
@@ -70,9 +73,17 @@ FuBao is a Taoist talisman cultural e-commerce site targeting overseas markets. 
 │   │       ├── spree_oauth/    # POST token (password grant)
 │   │       └── account/        # GET/PATCH profile / orders / orders/[number] /
 │   │                           # credit_cards / addresses
+│   ├── (also /api/auth/*, /api/user/{checkin,points,favorites,history},
+│   │    /api/notifications, /api/ai/*, /api/merchant/*, /api/admin/*,
+│   │    /api/coupons, /api/crypto/*, /api/giveaways, /api/distribution)
 │   └── lib/
 │       ├── api/
 │       │   └── index.ts        # Data access facade (routes reads through spree/queries)
+│       ├── favorites/
+│       │   └── favorites-context.tsx # React context: server-backed wishlist (auth users)
+│       ├── notifications/
+│       │   ├── notification-store.ts # In-memory notifications (globalThis)
+│       │   └── order-notify.ts       # notifyOrderCompleted (dedup via meta.orderId)
 │       ├── spree/              # Spree integration layer (frontend side)
 │       │   ├── client.ts       # HTTP client: SPREE_API_URL env or local /api/v2/storefront
 │       │   ├── adapter.ts      # Spree JSON:API -> internal type mapping
@@ -80,8 +91,10 @@ FuBao is a Taoist talisman cultural e-commerce site targeting overseas markets. 
 │       ├── spree-compat/       # Spree contract layer
 │       │   ├── types.ts        # JSON:API response types (SpreeResource etc.)
 │       │   ├── serializers.ts  # Product/Taxon/Vendor JSON:API serializers
+│       │   ├── account-auth.ts # resolveAccountAuth (Bearer OR session cookie)
 │       │   ├── order-store.ts  # In-memory order state machine (globalThis)
-│       │   └── order-serializer.ts # Cart/Order JSON:API serializer
+│       │   └── order-serializer.ts # Cart/Order JSON:API serializer +
+│       │                           # resolveRequestUser (dual-mode like account-auth)
 │       ├── data/
 │       │   ├── types.ts        # TypeScript type definitions
 │       │   └── products.ts     # Mock product/review/verification data
@@ -146,6 +159,10 @@ Defined in `src/app/globals.css` and `DESIGN.md`:
 - Verification uses mock codes (FB-2026-XXXXXX format)
 - AI Assistant (`/ai-chat`): SSE streaming (`/api/ai/chat`), model selector from `/api/ai/models` (doubao-seed/lite/pro), markdown rendering (react-markdown + remark-gfm), RAG over knowledge base (`usedKnowledge` meta frame after content frames, `data: [DONE]` terminator). System prompt injects the live product catalog via `getProducts()` so answers link real slugs (`[Protection Talisman](/talisman/protection-talisman)`); compliance rules enforced (no supernatural claims, "For entertainment purposes only"). Client controls: stop generation (AbortController), copy message, regenerate last answer, clear chat. Abort-safe stream: controller closed after cancel → enqueue guarded by try/catch
 - Daily check-in (`/account` card): `GET /api/user/checkin` returns `{canCheckIn, streak, totalDays, lastCheckIn, nextReward}` (nextReward = points for the NEXT check-in); `POST` awards points from the weekly cycle `CHECKIN_REWARDS = [5,5,10,10,15,15,30]` and returns `{streak, pointsEarned, message}`; duplicate same-day POST → 400 "Already checked in today". The client (`account/client.tsx`) mirrors the reward table for the 7-Day Rewards strip (completed days in cycle = `canCheckIn ? streak % 7 : ((streak - 1) % 7) + 1`) and shows a level progress bar. Level thresholds live in `user-store.ts addPoints` (silver ≥ 500, gold ≥ 2000, platinum ≥ 5000) — client `LEVELS` array must mirror them exactly. New users start with 100 points (welcome bonus)
+- Wishlist (`FavoritesProvider` in `lib/favorites/favorites-context.tsx`, mounted in root layout): server-backed via `GET/POST /api/user/favorites` (POST toggles, returns `{action: 'added'|'removed'}`); anonymous users get localStorage fallback + login prompt toast. `FavoriteButton` (heart, `components/shared/`) on `/talisman` cards + product detail; `/wishlist` renders favorites with a mini product card grid. All favorites APIs require auth (401 otherwise)
+- Browsing history: `TrackView` (invisible client component, `components/shared/`) fires `POST /api/user/history {productSlug, productName}` on product detail mount; store keeps last 10 per user, most-recent-first, dedupes consecutive repeats. `GET /api/user/history` returns `{history: [{productSlug, productName, viewedAt}]}`
+- Notifications: `GET /api/notifications` → `{notifications: [{id, title, message, link, read, createdAt}], unreadCount}`; `PUT` with `{id}` or `{markAll: true}` marks read. `NotificationsBell` (header, logged-in only) polls unreadCount (30s) with cinnabar badge + popover feed; `/notifications` page lists all with mark-as-read. Orders completing via Spree checkout `confirm`/`complete` routes fire `notifyOrderCompleted` (dedup by `meta.orderId`, so double-advance confirm→complete never duplicates) — user linkage requires cart `associate` first
+- Logged-in checkout association: `checkout/client.tsx` PATCHes `/cart/associate` (session cookie auth) before address step so the order gets a `user_id` — required for the order to appear in `/account` history and receive the completion notification. `resolveRequestUser` in `spree-compat/order-serializer.ts` accepts Bearer JWT OR session cookie (same dual mode as `resolveAccountAuth`); the real Spree client path uses Bearer, the site uses cookies
 
 ## In-Memory Store Persistence Rule (CRITICAL)
 
@@ -156,7 +173,7 @@ const globalStore = globalThis as unknown as { __fubaoX?: Map<K, V> };
 const store: Map<K, V> = (globalStore.__fubaoX ??= new Map());
 ```
 
-Stores already on globalThis: `spree-compat/order-store`, `auth/user-store` (seed-once guard `__fubaoUsersSeeded`), `coupons/coupon-store` (seeds when empty), `distribution/distribution-store`, `giveaways/giveaway-store` (seeds when empty), `notifications/notification-store` (seed-once via `has()` check), `crypto/payment-store` (demo wallet seeded via `has()` check), `api/user/checkin` route (`__fubaoCheckIns`), and the legacy orders array in `lib/api/index.ts` (`__fubaoLegacyOrders`). `merchant/merchant-store` is a read-only seed array (no mutation APIs) — safe as-is. When adding a new store, follow the same pattern and seed idempotently (guard with a flag or `size === 0` check so re-instantiation never wipes runtime writes).
+Stores already on globalThis: `spree-compat/order-store`, `auth/user-store` (seed-once guard `__fubaoUsersSeeded`), `coupons/coupon-store` (seeds when empty), `distribution/distribution-store`, `giveaways/giveaway-store` (seeds when empty), `notifications/notification-store` (seed-once via `has()` check), `crypto/payment-store` (demo wallet seeded via `has()` check), `api/user/checkin` route (`__fubaoCheckIns`), `api/user/favorites` route (`__fubaoFavorites`), `api/user/history` route (`__fubaoHistory`), and the legacy orders array in `lib/api/index.ts` (`__fubaoLegacyOrders`). `merchant/merchant-store` is a read-only seed array (no mutation APIs) — safe as-is. When adding a new store, follow the same pattern and seed idempotently (guard with a flag or `size === 0` check so re-instantiation never wipes runtime writes).
 
 ## Known Auth Patterns (Important)
 

@@ -3,6 +3,7 @@ import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { FontPreload } from '@/components/layout/font-preload';
 import { AuthProvider } from '@/lib/auth/auth-context';
+import { FavoritesProvider } from '@/lib/favorites/favorites-context';
 import { LocaleProvider } from '@/lib/i18n/locale-context';
 import './globals.css';
 
@@ -43,9 +44,11 @@ export default function RootLayout({
         <FontPreload />
         <LocaleProvider>
           <AuthProvider>
-            <Header />
-            <main className="min-h-[calc(100vh-4rem)]">{children}</main>
-            <Footer />
+            <FavoritesProvider>
+              <Header />
+              <main className="min-h-[calc(100vh-4rem)]">{children}</main>
+              <Footer />
+            </FavoritesProvider>
           </AuthProvider>
         </LocaleProvider>
       </body>

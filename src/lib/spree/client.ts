@@ -327,6 +327,28 @@ export async function spreeGetCart(token: string): Promise<SpreeCart | null> {
   }
 }
 
+/**
+ * PATCH /cart/associate — claim the guest cart for the signed-in user so the
+ * completed order lands in their account history. Best-effort: failures are
+ * swallowed because guest checkout must keep working.
+ */
+export async function spreeAssociateCart(token: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE}/cart/associate`, {
+      method: 'PATCH',
+      headers: {
+        Accept: 'application/vnd.api+json',
+        'X-Spree-Order-Token': token,
+      },
+      credentials: 'same-origin',
+      cache: 'no-store',
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 /* ---------- Checkout state machine (Spree v2 contract) ---------- */
 
 export interface SpreeCheckoutAddress {
