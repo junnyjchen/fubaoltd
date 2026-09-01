@@ -23,6 +23,43 @@ users.set('demo@fubao.com', {
   passwordHash: demoPasswordHash,
 });
 
+// Seed demo merchant accounts (linked to merchant-store records)
+const merchantHash = await hashPassword('merchant123');
+users.set('merchant@fubao.com', {
+  id: 'usr-merchant-001',
+  email: 'merchant@fubao.com',
+  name: 'Qingyun Temple Crafts',
+  role: 'merchant',
+  status: 'active',
+  emailVerified: true,
+  createdAt: '2024-05-01T00:00:00Z',
+  updatedAt: '2024-05-01T00:00:00Z',
+  points: 0,
+  level: 'bronze',
+  referralCode: 'FBMCH001',
+  walletBalance: 0,
+  walletCurrency: 'USD',
+  passwordHash: merchantHash,
+});
+
+const craftsmanHash = await hashPassword('craft123');
+users.set('craftsman@fubao.com', {
+  id: 'usr-merchant-002',
+  email: 'craftsman@fubao.com',
+  name: 'Li Family Talisman Workshop',
+  role: 'merchant',
+  status: 'active',
+  emailVerified: true,
+  createdAt: '2024-08-15T00:00:00Z',
+  updatedAt: '2024-08-15T00:00:00Z',
+  points: 0,
+  level: 'bronze',
+  referralCode: 'FBMCH002',
+  walletBalance: 0,
+  walletCurrency: 'USD',
+  passwordHash: craftsmanHash,
+});
+
 export async function createUser(
   email: string,
   password: string,
