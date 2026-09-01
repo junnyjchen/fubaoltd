@@ -49,12 +49,47 @@ export default async function OrderPage({ params }: Props) {
                   >
                     <span className="text-ink">
                       {item.name} × {item.quantity}
+                      {item.options?.personalization && (
+                        <span className="mt-0.5 block text-xs text-smoke">
+                          Personalization: {item.options.personalization}
+                        </span>
+                      )}
                     </span>
                     <span className="text-smoke">
                       ${(item.price * item.quantity).toFixed(2)}
                     </span>
                   </div>
                 ))}
+                <div className="space-y-2 border-t border-border pt-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-smoke">Subtotal</span>
+                    <span className="text-ink">${order.itemTotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-smoke">Shipping</span>
+                    <span className="text-ink">
+                      {order.shipTotal > 0 ? `$${order.shipTotal.toFixed(2)}` : 'Free'}
+                    </span>
+                  </div>
+                  {order.couponCode && order.promoTotal > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gold">Promo {order.couponCode}</span>
+                      <span className="text-gold">−${order.promoTotal.toFixed(2)}</span>
+                    </div>
+                  )}
+                </div>
+                {order.shipAddress && (
+                  <div className="border-t border-border pt-3 text-sm">
+                    <p className="text-xs uppercase tracking-wide text-smoke">
+                      Shipping to
+                    </p>
+                    <p className="mt-1 text-ink">
+                      {order.shipAddress.firstname} {order.shipAddress.lastname},{' '}
+                      {order.shipAddress.address1}, {order.shipAddress.city}{' '}
+                      {order.shipAddress.zipcode}, {order.shipAddress.countryIso}
+                    </p>
+                  </div>
+                )}
                 <div className="flex justify-between border-t border-border pt-2 text-sm">
                   <span className="font-medium text-ink">Total</span>
                   <span className="font-medium text-cinnabar">

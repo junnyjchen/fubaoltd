@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/hooks/use-cart';
 import type { ShippingAddress } from '@/lib/data/types';
 import Link from 'next/link';
-import { CreditCard, Loader2 } from 'lucide-react';
+import { Bitcoin, CreditCard, Loader2, Ticket } from 'lucide-react';
 import {
   spreeCheckoutAddress,
   spreeCheckoutDelivery,
@@ -15,26 +15,49 @@ import {
   spreeGetShippingRates,
   spreeGetPaymentMethods,
   getSpreeCartToken,
-  type SpreeShippingRate,
   type SpreePaymentMethod,
 } from '@/lib/spree/client';
 
+const EMPTY_ADDRESS: ShippingAddress = {
+  fullName: '',
+  email: '',
+  phone: '',
+  address: '',
+  city: '',
+  state: '',
+  zipCode: '',
+  country: '',
+};
+
 export function CheckoutClient() {
   const router = useRouter();
-  const { items, resetCart } = useCart();
+  const { items, isLoaded, resetCart, totals } = useCart();
   const [loading, setLoading] = useState(false);
-  const [showPaymentMsg, setShowPaymentMsg] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState<ShippingAddress>({
-    fullName: '',
-    email: '',
-    phone: '',
-    address: '',
-    city: '',
-    state: '',
-    zipCode: '',
-    country: '',
-  });
+  const [methods, setMethods] = useState<SpreePaymentMethod[]>([]);
+  const [methodsError, setMethodsError] = useState<string | null>(null);
+  const [selectedMethodId, setSelectedMethodId] = useState<string | null>(null);
+  const [form, setForm] = useState<ShippingAddress>(EMPTY_ADDRESS);
+
+  // Payment methods come from the Spree layer — never hardcoded per-page.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await spreeGetPaymentMethods(getSpreeCartToken());
+        if (cancelled) return;
+        setMethods(list);
+        const preferred = list.find((m) => m.methodType === 'stripe') ?? list[0];
+        if (preferred) setSelectedMethodId(preferred.id);
+      } catch {
+        if (!cancelled)
+          setMethodsError('Could not load payment methods. Please refresh the page.');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const cartItems = items.map((item) => ({
     slug: item.slug,
@@ -43,10 +66,16 @@ export function CheckoutClient() {
     quantity: item.quantity,
   }));
 
-  const subtotal = cartItems.reduce(
+  // Server-owned totals (Spree cart) with a client-side fallback while syncing.
+  const fallbackSubtotal = cartItems.reduce(
     (sum, item) => sum + (item.price ?? 0) * item.quantity,
     0
   );
+  const itemTotal = totals?.itemTotal ?? fallbackSubtotal;
+  const shipTotal = totals?.shipTotal ?? 0;
+  const promoTotal = totals?.promoTotal ?? 0;
+  const couponCode = totals?.couponCode ?? null;
+  const grandTotal = totals?.total ?? fallbackSubtotal;
 
   const updateField = (field: keyof ShippingAddress, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -57,6 +86,11 @@ export function CheckoutClient() {
     const cartToken = getSpreeCartToken();
     if (!cartToken) {
       setError('Your cart session has expired. Please refresh and try again.');
+      return;
+    }
+    const method = methods.find((m) => m.id === selectedMethodId);
+    if (!method) {
+      setError('Please select a payment method.');
       return;
     }
     setLoading(true);
@@ -80,10 +114,7 @@ export function CheckoutClient() {
       if (!selectedRate) throw new Error('No shipping rates available');
       await spreeCheckoutDelivery(cartToken, selectedRate.id);
 
-      const methods = await spreeGetPaymentMethods(cartToken);
-      const stripeMethod = methods.find((m) => m.methodType === 'stripe') ?? methods[0];
-      if (!stripeMethod) throw new Error('No payment methods available');
-      await spreeCheckoutPayment(cartToken, stripeMethod.id);
+      await spreeCheckoutPayment(cartToken, method.id);
 
       await spreeCheckoutConfirm(cartToken);
       const completed = await spreeCheckoutComplete(cartToken);
@@ -96,6 +127,15 @@ export function CheckoutClient() {
       setLoading(false);
     }
   };
+
+  if (!isLoaded) {
+    return (
+      <div className="py-16 text-center">
+        <Loader2 className="mx-auto h-5 w-5 animate-spin text-smoke" />
+        <p className="mt-3 text-sm text-smoke">Loading your cart…</p>
+      </div>
+    );
+  }
 
   if (items.length === 0) {
     return (
@@ -221,33 +261,50 @@ export function CheckoutClient() {
             </div>
           </div>
 
-          {/* Payment */}
+          {/* Payment — methods served by the Spree layer */}
           <div className="mt-8">
             <h2 className="mb-6 text-xs font-medium uppercase tracking-[0.15em] text-ink">
               Payment
             </h2>
-            <div className="border border-border p-6">
-              <div className="flex items-center gap-3">
-                <CreditCard className="h-5 w-5 text-smoke" />
-                <span className="text-sm text-ink">Stripe</span>
+            {methodsError ? (
+              <p className="text-xs text-cinnabar" role="alert">
+                {methodsError}
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {methods.map((m) => (
+                  <label
+                    key={m.id}
+                    className="flex cursor-pointer items-start gap-3 border border-border p-4 transition-colors has-[:checked]:border-cinnabar"
+                  >
+                    <input
+                      type="radio"
+                      name="payment-method"
+                      checked={selectedMethodId === m.id}
+                      onChange={() => setSelectedMethodId(m.id)}
+                      className="mt-1 accent-cinnabar"
+                    />
+                    {m.methodType === 'crypto' ? (
+                      <Bitcoin className="mt-0.5 h-4 w-4 text-smoke" />
+                    ) : (
+                      <CreditCard className="mt-0.5 h-4 w-4 text-smoke" />
+                    )}
+                    <span>
+                      <span className="block text-sm text-ink">{m.name}</span>
+                      {m.description && (
+                        <span className="mt-1 block text-xs text-smoke">
+                          {m.description}
+                        </span>
+                      )}
+                    </span>
+                  </label>
+                ))}
               </div>
-              {showPaymentMsg && (
-                <p className="mt-3 text-xs text-cinnabar">
-                  Payment will be available soon. Your order has been recorded.
-                </p>
-              )}
-              <button
-                type="button"
-                onClick={() => setShowPaymentMsg(true)}
-                className="mt-4 text-xs text-smoke underline underline-offset-2"
-              >
-                What payment methods do you accept?
-              </button>
-            </div>
+            )}
           </div>
         </div>
 
-        {/* Summary */}
+        {/* Summary — server-owned totals */}
         <div className="lg:col-span-2">
           <div className="border border-border p-6">
             <h2 className="mb-4 text-xs font-medium uppercase tracking-[0.15em] text-ink">
@@ -268,11 +325,32 @@ export function CheckoutClient() {
                 </div>
               ))}
             </div>
+            <div className="mt-4 space-y-2 border-t border-border pt-4 text-sm">
+              <div className="flex justify-between">
+                <span className="text-smoke">Subtotal</span>
+                <span className="text-ink">${itemTotal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-smoke">Shipping</span>
+                <span className="text-ink">
+                  {shipTotal > 0 ? `$${shipTotal.toFixed(2)}` : 'Calculated at delivery'}
+                </span>
+              </div>
+              {couponCode && promoTotal > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="inline-flex items-center gap-1.5 text-gold">
+                    <Ticket className="h-3.5 w-3.5" />
+                    Promo {couponCode}
+                  </span>
+                  <span className="text-gold">−${promoTotal.toFixed(2)}</span>
+                </div>
+              )}
+            </div>
             <div className="mt-4 border-t border-border pt-4">
               <div className="flex justify-between">
                 <span className="text-sm font-medium text-ink">Total</span>
                 <span className="text-lg font-light text-cinnabar">
-                  ${subtotal.toFixed(2)}
+                  ${grandTotal.toFixed(2)}
                 </span>
               </div>
             </div>

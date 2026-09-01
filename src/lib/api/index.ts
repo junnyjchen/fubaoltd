@@ -337,6 +337,7 @@ export async function getOrderDetailForOrderNumber(
   shipTotal: number;
   promoTotal: number;
   total: number;
+  couponCode: string | null;
   createdAt: string;
   completedAt: string | null;
   shipAddress: {
@@ -370,6 +371,7 @@ export async function getOrderDetailForOrderNumber(
     shipTotal: order.shipTotal,
     promoTotal: order.promoTotal,
     total: order.itemTotal + order.shipTotal - order.promoTotal,
+    couponCode: order.couponCode ?? null,
     createdAt: order.createdAt,
     completedAt: order.completedAt ?? null,
     shipAddress: order.shipAddress
