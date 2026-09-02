@@ -53,7 +53,7 @@ function StreamingCursor() {
   );
 }
 
-export function AIChatClient() {
+export function AIChatClient({ initialQuery }: { initialQuery?: string }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -64,6 +64,7 @@ export function AIChatClient() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const autoSentRef = useRef(false);
 
   // Fetch available models
   useEffect(() => {
@@ -186,6 +187,21 @@ export function AIChatClient() {
     },
     [selectedModel]
   );
+
+  // Auto-send the prefilled question from ?q= (floating assistant hand-off).
+  // Guarded so a change in runStream identity (model list loading) never re-sends.
+  useEffect(() => {
+    const query = initialQuery?.trim();
+    if (!query || autoSentRef.current) return;
+    autoSentRef.current = true;
+
+    const history: Message[] = [{ role: "user", content: query }];
+    setMessages(history);
+    setIsLoading(true);
+    // Clean the URL so a refresh starts a fresh conversation instead of re-sending
+    window.history.replaceState(null, "", "/ai-chat");
+    runStream(history).then(() => setIsLoading(false));
+  }, [initialQuery, runStream]);
 
   const sendMessage = useCallback(async () => {
     if (!input.trim() || isLoading) return;

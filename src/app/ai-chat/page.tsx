@@ -7,7 +7,13 @@ export const metadata: Metadata = {
     "Chat with our AI assistant about Taoist culture, talismans, and Eastern spiritual traditions.",
 };
 
-export default function AIChatPage() {
+export default async function AIChatPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const { q } = await searchParams;
+
   return (
     <main className="min-h-screen bg-[var(--paper)] pt-24 pb-16">
       <div className="mx-auto max-w-4xl px-4 sm:px-6">
@@ -22,7 +28,7 @@ export default function AIChatPage() {
         </div>
 
         {/* Chat Interface */}
-        <AIChatClient />
+        <AIChatClient initialQuery={q} />
       </div>
     </main>
   );
