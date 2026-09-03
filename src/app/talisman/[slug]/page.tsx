@@ -30,11 +30,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: `${product.name} | FuBao`,
       description: product.tagline,
       url: `/talisman/${product.slug}`,
+      images: [
+        {
+          url: '/og-brand.png',
+          width: 2560,
+          height: 1440,
+          alt: `${product.name} — FuBao`,
+        },
+      ],
     },
     twitter: {
-      card: 'summary',
+      card: 'summary_large_image',
       title: `${product.name} | FuBao`,
       description: product.tagline,
+      images: ['/og-brand.png'],
     },
   };
 }

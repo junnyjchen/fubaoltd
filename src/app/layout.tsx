@@ -34,6 +34,21 @@ export const metadata: Metadata = {
       'Authentic Taoist talismans hand-drawn by Master Chen in Hong Kong. Cultural artifacts for protection, harmony, and prosperity.',
     type: 'website',
     locale: 'en_US',
+    images: [
+      {
+        url: '/og-brand.png',
+        width: 2560,
+        height: 1440,
+        alt: 'FuBao — Hand-drawn Taoist Talismans',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'FuBao — Hand-drawn Taoist Talismans',
+    description:
+      'Authentic Taoist talismans hand-drawn by Master Chen in Hong Kong. Cultural artifacts for protection, harmony, and prosperity.',
+    images: ['/og-brand.png'],
   },
 };
 

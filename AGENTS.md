@@ -157,6 +157,7 @@ stores with real `SPREE_API_URL` calls later — routes keep the same contract.
 - **State persistence**: `order-store.ts` keeps in-memory Maps on `globalThis` so all routes share state across module instances in dev
 - **Users**: reuses `@/lib/auth/user-store` (demo@fubao.com / demo123); JWT issued by `@/lib/auth/jwt`
 
+- Open Graph images: `public/og-brand.png` (2560x1440, brand card: xuan paper bg + cinnabar talisman + ink wordmark + vermillion seal). Root layout `metadata.openGraph` sets default `og:image`/`og:image:width/height`/`twitter:card: summary_large_image`; product + article detail pages inherit it via their own `openGraph` blocks (no per-item images yet — article `coverImage` seeds are empty). Combined with `metadataBase` (env domain) all shares render rich cards on X/Facebook/WhatsApp
 - SEO (`sitemap.ts` / `robots.ts`): base URL comes from `process.env.COZE_PROJECT_DOMAIN_DEFAULT` (fallback `https://fubao.co`) — never hardcoded. Sitemap enumerates all public pages + product slugs (`getProducts()`) + article slugs (`getArticles()`), excluding private areas. Robots allows `/` but disallows `/admin/`, `/merchant/`, `/account`, `/cart`, `/checkout`, `/order/`, `/wallet`, `/notifications`, `/wishlist`, `/referral`, `/api/` and references the sitemap at the env domain
 
 ## Design Tokens

@@ -24,6 +24,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: article.excerpt,
       type: "article",
       url: `/articles/${article.slug}`,
+      images: [
+        {
+          url: '/og-brand.png',
+          width: 2560,
+          height: 1440,
+          alt: `${article.title} — FuBao`,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${article.title} | FuBao`,
+      description: article.excerpt,
+      images: ['/og-brand.png'],
     },
   };
 }
