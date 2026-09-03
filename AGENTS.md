@@ -215,6 +215,17 @@ Stores already on globalThis: `spree-compat/order-store`, `auth/user-store` (see
 - `pnpm ts-check` — TypeScript type checking
 - `pnpm lint` — ESLint
 
+## Self-Hosting (BT Panel / 宝塔)
+
+Full deployment guide lives in `宝塔部署教程.md`. Key invariants for any self-hosted production run:
+
+- Entrypoint is the custom server `dist/server.js` (tsup-bundled from `src/server.ts`), NOT `next start`
+- `COZE_PROJECT_ENV=PROD` MUST be set — otherwise the custom server prepares Next.js in dev mode
+- Env vars are process-injected only (no dotenv auto-load); JWT_SECRET must be replaced from the dev default
+- `instances: 1` in PM2 — all stores live on globalThis, multiple instances would fork state
+- Nginx reverse proxy needs `proxy_buffering off` for the AI chat SSE stream (`/api/ai/chat` does not set `X-Accel-Buffering`)
+- `/api/ai/*`, `/api/upload`, `/api/knowledge/*` depend on sandbox-injected Coze credentials — unavailable on self-hosted servers (expected); set `SPREE_API_URL` to swap the in-memory data layer for a real Spree 5.4 backend
+
 ## Extension Points
 
 - Point `SPREE_API_URL` at a real Spree 5.4 instance — routes and frontend switch over without code changes
