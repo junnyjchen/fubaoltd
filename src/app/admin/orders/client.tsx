@@ -22,6 +22,7 @@ const navItems = [
   { label: 'Giveaways', href: '/admin/giveaways' },
   { label: 'Free Blessing', href: '/admin/blessing' },
   { label: 'Merchants', href: '/admin/merchants' },
+  { label: 'Wishes', href: '/admin/wishes' },
 ];
 
 interface AdminOrderView {
