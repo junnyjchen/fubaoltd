@@ -3,9 +3,22 @@ import { LLMClient, Config, HeaderUtils } from "coze-coding-dev-sdk";
 
 export async function POST(request: NextRequest) {
   try {
-    const { text, targetLang = "en", sourceLang } = await request.json();
+    let text: string | undefined;
+    let targetLang = "en";
+    let sourceLang: string | undefined;
+    try {
+      const body = await request.json();
+      text = body?.text;
+      targetLang = body?.targetLang ?? "en";
+      sourceLang = body?.sourceLang;
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid JSON body" },
+        { status: 400 }
+      );
+    }
 
-    if (!text) {
+    if (!text || typeof text !== "string" || !text.trim()) {
       return NextResponse.json(
         { error: "Text is required" },
         { status: 400 }

@@ -26,6 +26,8 @@ export default function KnowledgeClientPage() {
   const [importUri, setImportUri] = useState("");
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [translating, setTranslating] = useState(false);
+  const [translateNote, setTranslateNote] = useState<string | null>(null);
 
   // Search test state
   const [query, setQuery] = useState("");
@@ -33,6 +35,37 @@ export default function KnowledgeClientPage() {
   const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
 
   const resultRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * POST /api/ai/translate — render the pasted content into English using the
+   * LLM (Taoist terminology aware). The translation is written back into the
+   * textarea so the admin can review/edit it before importing.
+   */
+  const handleTranslate = async () => {
+    if (!textContent.trim()) return;
+    setTranslating(true);
+    setTranslateNote(null);
+    try {
+      const res = await fetch("/api/ai/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: textContent, targetLang: "en" }),
+      });
+      const data = await res.json();
+      if (res.ok && data?.data?.translated) {
+        setTextContent(data.data.translated);
+        setTranslateNote(
+          "Translated to English — review the text below, then import."
+        );
+      } else {
+        setTranslateNote(data?.error || "Translation failed. Try again.");
+      }
+    } catch {
+      setTranslateNote("Network error during translation. Try again.");
+    } finally {
+      setTranslating(false);
+    }
+  };
 
   const handleImport = async (source: "text" | "url" | "uri") => {
     setImporting(true);
@@ -133,16 +166,29 @@ export default function KnowledgeClientPage() {
               <Textarea
                 value={textContent}
                 onChange={(e) => setTextContent(e.target.value)}
-                placeholder="Paste knowledge content here. E.g., the history of Taoist talismans, Five Elements theory, consecration ritual details..."
+                placeholder="Paste knowledge content here — any language. E.g., the history of Taoist talismans, Five Elements theory, consecration ritual details... Use 'Translate to English' for Chinese source material."
                 className="min-h-[180px] mb-4 bg-background"
               />
-              <Button
-                onClick={() => handleImport("text")}
-                disabled={importing || !textContent.trim()}
-                className="bg-cinnabar text-paper hover:bg-cinnabar/90"
-              >
-                {importing ? "Importing..." : "Import Text"}
-              </Button>
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  onClick={() => handleImport("text")}
+                  disabled={importing || !textContent.trim()}
+                  className="bg-cinnabar text-paper hover:bg-cinnabar/90"
+                >
+                  {importing ? "Importing..." : "Import Text"}
+                </Button>
+                <Button
+                  onClick={handleTranslate}
+                  disabled={translating || !textContent.trim()}
+                  variant="outline"
+                  className="border-gold text-gold hover:bg-gold/10"
+                >
+                  {translating ? "Translating..." : "Translate to English"}
+                </Button>
+              </div>
+              {translateNote && (
+                <p className="mt-3 text-xs text-smoke">{translateNote}</p>
+              )}
             </div>
 
             {/* URL import */}
