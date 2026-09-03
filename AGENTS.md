@@ -157,6 +157,8 @@ stores with real `SPREE_API_URL` calls later — routes keep the same contract.
 - **State persistence**: `order-store.ts` keeps in-memory Maps on `globalThis` so all routes share state across module instances in dev
 - **Users**: reuses `@/lib/auth/user-store` (demo@fubao.com / demo123); JWT issued by `@/lib/auth/jwt`
 
+- SEO (`sitemap.ts` / `robots.ts`): base URL comes from `process.env.COZE_PROJECT_DOMAIN_DEFAULT` (fallback `https://fubao.co`) — never hardcoded. Sitemap enumerates all public pages + product slugs (`getProducts()`) + article slugs (`getArticles()`), excluding private areas. Robots allows `/` but disallows `/admin/`, `/merchant/`, `/account`, `/cart`, `/checkout`, `/order/`, `/wallet`, `/notifications`, `/wishlist`, `/referral`, `/api/` and references the sitemap at the env domain
+
 ## Design Tokens
 
 Defined in `src/app/globals.css` and `DESIGN.md`:
