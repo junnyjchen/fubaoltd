@@ -199,6 +199,12 @@ export function CartClient() {
             {promoError && <p className="mt-2 text-xs text-cinnabar">{promoError}</p>}
           </form>
         )}
+        <p className="mt-2 text-xs text-smoke">
+          Looking for a code?{' '}
+          <a href="/coupons" className="text-cinnabar underline underline-offset-2 hover:text-cinnabar/80">
+            Browse the Coupon Center
+          </a>
+        </p>
 
         <p className="mt-2 text-xs text-smoke">
           Shipping calculated at checkout

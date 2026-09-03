@@ -407,6 +407,13 @@ export function AccountPageClient() {
             <span className="block font-medium">Crypto Wallet</span>
             <span className="text-xs text-muted-foreground">Deposit & pay with USDT</span>
           </Link>
+          <Link
+            href="/coupons"
+            className="p-3 border border-border rounded-md text-sm text-foreground hover:bg-muted transition-colors text-left"
+          >
+            <span className="block font-medium">Coupon Center</span>
+            <span className="text-xs text-muted-foreground">Claim discount codes</span>
+          </Link>
           <button
             onClick={copyReferral}
             className="p-3 border border-border rounded-md text-sm text-foreground hover:bg-muted transition-colors text-left"
