@@ -27,8 +27,9 @@ export async function GET(request: NextRequest) {
   // Free-gift products (e.g. the blessing talisman) stay out of the public
   // catalog listing; they remain reachable via the direct slug endpoint or an
   // explicit filter[skus] lookup. Keeps product/variant id numbering stable.
+  // Admin-deactivated products are hidden from listings the same way.
   if (!params.get('filter[skus]')) {
-    filtered = filtered.filter((p) => !p.isFreeGift);
+    filtered = filtered.filter((p) => !p.isFreeGift && p.isActive !== false);
   }
 
   // filter[name] — substring match on name/tagline

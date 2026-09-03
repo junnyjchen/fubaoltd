@@ -95,3 +95,41 @@ export function createGiveaway(data: Omit<Giveaway, 'id' | 'claimedCount' | 'win
   giveaways.set(giveaway.id, giveaway);
   return giveaway;
 }
+
+/** Admin: edit giveaway fields (title/dates/quota/status). */
+export function updateGiveaway(
+  id: string,
+  updates: Partial<Pick<Giveaway, 'title' | 'description' | 'totalPrizes' | 'status' | 'startDate' | 'endDate'>>
+): Giveaway | null {
+  const giveaway = giveaways.get(id);
+  if (!giveaway) return null;
+  if (updates.totalPrizes !== undefined) {
+    if (updates.totalPrizes < giveaway.claimedCount) return null;
+    giveaway.totalPrizes = updates.totalPrizes;
+    // Re-open if quota was raised above the claimed count
+    if (giveaway.status === 'ended' && giveaway.claimedCount < giveaway.totalPrizes) {
+      giveaway.status = 'active';
+    }
+  }
+  if (updates.title !== undefined) giveaway.title = updates.title;
+  if (updates.description !== undefined) giveaway.description = updates.description;
+  if (updates.status !== undefined) giveaway.status = updates.status;
+  if (updates.startDate !== undefined) giveaway.startDate = updates.startDate;
+  if (updates.endDate !== undefined) giveaway.endDate = updates.endDate;
+  return giveaway;
+}
+
+/** Admin: delete a giveaway (winners lose their claim records). */
+export function deleteGiveaway(id: string): boolean {
+  return giveaways.delete(id);
+}
+
+/** Admin: mark a winner's prize as fulfilled. */
+export function markWinnerFulfilled(giveawayId: string, winnerId: string): boolean {
+  const giveaway = giveaways.get(giveawayId);
+  if (!giveaway) return false;
+  const winner = giveaway.winners.find((w) => w.id === winnerId);
+  if (!winner || winner.prizeFulfilled) return false;
+  winner.prizeFulfilled = true;
+  return true;
+}

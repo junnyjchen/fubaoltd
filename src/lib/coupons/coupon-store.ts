@@ -128,3 +128,33 @@ export function createCoupon(data: Omit<Coupon, 'id' | 'usedCount' | 'createdAt'
   coupons.set(coupon.code, coupon);
   return coupon;
 }
+
+/** Admin: edit editable coupon fields (code/identity/read-only counters stay fixed). */
+export function updateCoupon(
+  code: string,
+  updates: Partial<Omit<Coupon, 'id' | 'code' | 'usedCount' | 'createdAt'>>
+): Coupon | null {
+  const coupon = coupons.get(code.toUpperCase());
+  if (!coupon) return null;
+  if (updates.value !== undefined) {
+    if (updates.value <= 0) return null;
+    coupon.value = updates.value;
+  }
+  if (updates.type !== undefined) coupon.type = updates.type;
+  if (updates.minOrderAmount !== undefined) coupon.minOrderAmount = updates.minOrderAmount;
+  if (updates.maxDiscount !== undefined) coupon.maxDiscount = updates.maxDiscount;
+  if (updates.validFrom !== undefined) coupon.validFrom = updates.validFrom;
+  if (updates.validUntil !== undefined) coupon.validUntil = updates.validUntil;
+  if (updates.usageLimit !== undefined) {
+    if (updates.usageLimit < coupon.usedCount) return null;
+    coupon.usageLimit = updates.usageLimit;
+  }
+  if (updates.perUserLimit !== undefined) coupon.perUserLimit = updates.perUserLimit;
+  if (updates.isActive !== undefined) coupon.isActive = updates.isActive;
+  return coupon;
+}
+
+/** Admin: remove a coupon entirely (user claims become orphaned but harmless). */
+export function deleteCoupon(code: string): boolean {
+  return coupons.delete(code.toUpperCase());
+}

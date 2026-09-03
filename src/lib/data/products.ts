@@ -1,6 +1,10 @@
 import type { Product, Review, VerificationRecord } from './types';
 
-export const products: Product[] = [
+// Catalog persisted on globalThis so admin edits survive dev-mode module
+// re-instantiations and are shared across every route module (same pattern
+// as the other FuBao stores). Seeding runs only once per process.
+const globalStore = globalThis as unknown as { __fubaoCatalog?: Product[] };
+const seedProducts: Product[] = [
   {
     slug: 'protection-talisman',
     name: 'Protection Talisman',
@@ -130,6 +134,91 @@ export const products: Product[] = [
     isFreeGift: true,
   },
 ];
+
+export const products: Product[] = (globalStore.__fubaoCatalog ??= seedProducts);
+
+/**
+ * Admin catalog mutation: update editable fields (price / stock / tagline /
+ * listing visibility). Mutates the shared globalThis-backed array in place so
+ * every consumer (listings, Spree serializers, cart pricing in order-store)
+ * sees the change immediately.
+ */
+export function updateProductAdmin(
+  slug: string,
+  updates: Partial<Pick<Product, 'price' | 'stock' | 'tagline' | 'isActive'>>
+): Product | null {
+  const product = products.find((p) => p.slug === slug);
+  if (!product) return null;
+  if (updates.price !== undefined) {
+    if (updates.price < 0) return null;
+    product.price = Math.round(updates.price * 100) / 100;
+  }
+  if (updates.stock !== undefined) {
+    if (updates.stock < 0 || !Number.isInteger(updates.stock)) return null;
+    product.stock = updates.stock;
+  }
+  if (updates.tagline !== undefined) product.tagline = updates.tagline;
+  if (updates.isActive !== undefined) product.isActive = updates.isActive;
+  return product;
+}
+
+/**
+ * Admin catalog creation. Story / ritual info / image get sensible defaults
+ * (the talisman SVG renderer falls back to the protection variant for any
+ * unknown image key), so admins only need to supply the essentials.
+ */
+export function createProductAdmin(input: {
+  slug: string;
+  name: string;
+  price: number;
+  category: Product['category'];
+  tagline: string;
+  story?: string[];
+}): Product | null {
+  const slug = input.slug.trim().toLowerCase();
+  if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) return null;
+  if (slug.length < 3 || slug.length > 60) return null;
+  if (!input.name.trim()) return null;
+  if (!Number.isFinite(input.price) || input.price < 0) return null;
+  if (products.some((p) => p.slug === slug)) return null;
+
+  const product: Product = {
+    slug,
+    name: input.name.trim(),
+    price: Math.round(input.price * 100) / 100,
+    category: input.category,
+    tagline: input.tagline.trim(),
+    story:
+      input.story && input.story.length > 0
+        ? input.story
+        : [`${input.name.trim()} — a hand-drawn cultural keepsake from the FuBao collection. Each piece follows traditional Taoist consecration practices and ships with its verification card.`],
+    image_key: `talisman-${slug}.jpg`,
+    ritual_info: {
+      master: 'FuBao Atelier',
+      location: 'Hong Kong',
+      date: new Date().toISOString().slice(0, 10),
+      ceremonyId: `CER-${new Date().getFullYear()}-${String(products.length + 1).padStart(3, '0')}`,
+    },
+    rating: 5,
+    reviewCount: 0,
+    stock: 0,
+  };
+  products.push(product);
+  return product;
+}
+
+/**
+ * Admin catalog removal — hard delete. Refused while any order still
+ * references the slug (orders keep their line items forever), and refused
+ * for the free-blessing gift which the /blessing flow depends on.
+ */
+export function deleteProductAdmin(slug: string): boolean {
+  if (slug === 'free-blessing-talisman') return false;
+  const index = products.findIndex((p) => p.slug === slug);
+  if (index === -1) return false;
+  products.splice(index, 1);
+  return true;
+}
 
 export const reviews: Review[] = [
   {

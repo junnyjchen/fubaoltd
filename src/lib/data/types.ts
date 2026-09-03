@@ -27,6 +27,10 @@ export interface Product {
   isPersonalized?: boolean;
   /** Free community gift (Blessing Pavilion) — hidden from catalog listings, gated one per account */
   isFreeGift?: boolean;
+  /** Admin-managed inventory count (optional until first edit) */
+  stock?: number;
+  /** Listing visibility — false hides the product from catalog listings (slug access still works) */
+  isActive?: boolean;
 }
 
 // ─── Cart Types ───

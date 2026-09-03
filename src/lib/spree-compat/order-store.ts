@@ -143,6 +143,33 @@ export function listOrdersForUser(userId: string): SpreeOrderState[] {
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
+/** Admin: list every order (carts + completed), newest first. */
+export function listAllOrders(): SpreeOrderState[] {
+  return Array.from(orderStore.values()).sort((a, b) =>
+    b.createdAt.localeCompare(a.createdAt)
+  );
+}
+
+/**
+ * Admin: update an order's shipment status (ready → shipped → delivered).
+ * Only forward transitions from `ready`/`shipped` are allowed so the admin
+ * console can never rewind a Spree-owned checkout state machine.
+ */
+export function setAdminShipmentStatus(
+  number: string,
+  status: 'shipped' | 'delivered'
+): SpreeOrderState | null {
+  const order = orderStore.get(number);
+  if (!order) return null;
+  if (order.state !== 'complete') return null;
+  if (order.shipmentStatus === 'shipped' && status !== 'delivered') return null;
+  if (order.shipmentStatus !== 'ready' && order.shipmentStatus !== 'shipped') {
+    return null;
+  }
+  order.shipmentStatus = status;
+  return order;
+}
+
 /** A user's most recent incomplete order (their current cart), newest first. */
 export function getCurrentCartForUser(userId: string): SpreeOrderState | null {
   const carts = listOrdersForUser(userId).filter((order) => order.state !== 'complete');

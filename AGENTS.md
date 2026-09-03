@@ -48,6 +48,16 @@ FuBao is a Taoist talisman cultural e-commerce site targeting overseas markets. 
 │   │   ├── about/page.tsx      # About page
 │   │   ├── artisans/page.tsx   # Artisan/vendor showcase (Spree vendors)
 │   │   └── faq/page.tsx        # FAQ page
+│   │   └── admin/              # Admin console (role admin; pages below)
+│   │       ├── dashboard/      # Stats overview + nav
+│   │       ├── blessing/       # Free Blessing activity console
+│   │       ├── products/       # Product CRUD (list/create/edit/unlist/delete)
+│   │       ├── orders/         # Order list + shipment status management
+│   │       ├── coupons/        # Coupon CRUD + live engine validation
+│   │       ├── giveaways/      # Giveaway campaign CRUD
+│   │       ├── merchants/      # Merchant application review + withdrawals
+│   │       ├── ai-training/    # AI knowledge base
+│   │       └── knowledge/      # Knowledge base manager
 │   ├── components/
 │   │   ├── ui/                 # shadcn/ui components
 │   │   ├── layout/
@@ -75,7 +85,8 @@ FuBao is a Taoist talisman cultural e-commerce site targeting overseas markets. 
 │   │       └── account/        # GET/PATCH profile / orders / orders/[number] /
 │   │                           # credit_cards / addresses
 │   ├── (also /api/auth/*, /api/user/{checkin,points,favorites,history},
-│   │    /api/notifications, /api/ai/*, /api/merchant/*, /api/admin/*,
+│   │    /api/notifications, /api/ai/*, /api/merchant/*,
+│   │    /api/admin/{stats,blessing,products,orders,coupons,giveaways,merchants},
 │   │    /api/coupons, /api/crypto/*, /api/giveaways,
 │   │    /api/distribution, /api/distribution/{links,track,withdraw})
 │   └── lib/
@@ -189,7 +200,9 @@ Stores already on globalThis: `spree-compat/order-store`, `auth/user-store` (see
 - `requireAuth(request)` **throws** `'Unauthorized'`; `requireRole(request, role)` **throws** `'Forbidden'` — route handlers must catch and map to 401/403 (see `api/merchant/*`, `api/admin/stats` for the canonical pattern)
 - `useAuth()` provides `{ user, isLoading, login, register, logout, refreshUser }` — there is NO `status` field; client guards use `isLoading`/`user`
 - Merchant area: login at `/merchant/login` (site auth) → `/merchant/dashboard`; unauthed pages redirect via `?redirect=` param. Merchant role required for `api/merchant/*` (403 otherwise). Demo accounts: merchant@fubao.com / merchant123, admin@fubao.com / admin123
-- Admin area: `/admin/dashboard` (role `admin`)
+- Admin area: `/admin/dashboard` (role `admin`). Full console: `/admin/dashboard` (stats + nav), `/admin/blessing` (free-blessing campaigns), `/admin/products` (product CRUD), `/admin/orders` (order browser + ship-status), `/admin/coupons` (coupon CRUD), `/admin/giveaways` (campaign CRUD), `/admin/merchants` (application review + withdrawal processing), `/admin/ai-training` + `/admin/knowledge` (AI knowledge base). All admin APIs live under `/api/admin/*` and follow the same pattern: `requireRole('admin')` in try/catch → 401/403 mapping, mutations return `{success, data|message}` with 200, duplicates → 409, invalid input → 400
+- Admin product management: `createProductAdmin/updateProductAdmin/deleteProductAdmin` in `lib/data/products.ts` (globalThis-backed catalog with `stock`/`isActive` fields; `is_active` serialized in Spree attributes). Storefront list paths (queries.ts + products route) filter `!isActive`; slug lookups still serve unlisted products. New products get the default protection TalismanSVG variant + standard consecration fields
+- Admin coupon/giveaway/merchant mutations live beside their reads: `createCoupon/updateCouponAdmin/deleteCouponAdmin` (coupon-store), `createGiveaway/updateGiveawayAdmin/deleteGiveawayAdmin` (giveaway-store — status `active|upcoming|ended`, ended campaigns vanish from public `/api/giveaways`), `reviewMerchantApplication`/`processMerchantWithdrawalAdmin` (merchant-store; double-review → 400, invalid action → 400)
 
 ## Commands
 

@@ -1,4 +1,6 @@
-// In-memory merchant store with seed data.
+// In-memory merchant store with seed data, persisted on globalThis so admin
+// review mutations survive dev-mode module re-instantiations and are shared
+// across every route module (same pattern as the other FuBao stores).
 // Swap for real DB later.
 
 import type {
@@ -26,7 +28,7 @@ export const DEMO_MERCHANT_ACCOUNTS = [
   },
 ];
 
-export const merchants: Merchant[] = [
+const seedMerchants: Merchant[] = [
   {
     id: 'mch-001',
     userId: 'usr-merchant-001',
@@ -82,7 +84,7 @@ export const merchants: Merchant[] = [
   },
 ];
 
-export const merchantApplications: MerchantApplication[] = [
+const seedApplications: MerchantApplication[] = [
   {
     id: 'app-001',
     shopName: 'Wudang Mountain Studio',
@@ -99,7 +101,7 @@ export const merchantApplications: MerchantApplication[] = [
   },
 ];
 
-export const merchantProducts: MerchantProduct[] = [
+const seedProducts: MerchantProduct[] = [
   {
     id: 'mp-001',
     merchantId: 'mch-001',
@@ -158,7 +160,7 @@ export const merchantProducts: MerchantProduct[] = [
   },
 ];
 
-export const merchantOrders: MerchantOrder[] = [
+const seedOrders: MerchantOrder[] = [
   {
     id: 'MO-2025-0045',
     merchantId: 'mch-001',
@@ -203,7 +205,7 @@ export const merchantOrders: MerchantOrder[] = [
   },
 ];
 
-export const merchantWithdrawals: MerchantWithdrawal[] = [
+const seedWithdrawals: MerchantWithdrawal[] = [
   {
     id: 'wd-001',
     merchantId: 'mch-001',
@@ -229,6 +231,22 @@ export const merchantWithdrawals: MerchantWithdrawal[] = [
     createdAt: '2025-06-11',
   },
 ];
+
+// ---------- globalThis persistence (see header comment) ----------
+
+const globalStore = globalThis as unknown as {
+  __fubaoMerchants?: Merchant[];
+  __fubaoMerchantApplications?: MerchantApplication[];
+  __fubaoMerchantProducts?: MerchantProduct[];
+  __fubaoMerchantOrders?: MerchantOrder[];
+  __fubaoMerchantWithdrawals?: MerchantWithdrawal[];
+};
+
+export const merchants: Merchant[] = (globalStore.__fubaoMerchants ??= seedMerchants);
+export const merchantApplications: MerchantApplication[] = (globalStore.__fubaoMerchantApplications ??= seedApplications);
+export const merchantProducts: MerchantProduct[] = (globalStore.__fubaoMerchantProducts ??= seedProducts);
+export const merchantOrders: MerchantOrder[] = (globalStore.__fubaoMerchantOrders ??= seedOrders);
+export const merchantWithdrawals: MerchantWithdrawal[] = (globalStore.__fubaoMerchantWithdrawals ??= seedWithdrawals);
 
 // ---------- Accessors ----------
 
@@ -423,4 +441,91 @@ export function getDashboardStats(merchantId: string): DashboardStats {
     pendingWithdrawals: withdrawals.filter((w) => w.status === 'pending')
       .length,
   };
+}
+
+// ---------- Admin review mutations ----------
+
+/**
+ * Admin: approve or reject a merchant onboarding application.
+ * Approving provisions a Merchant record so the shop appears in /artisans
+ * and can onboard products through the merchant portal.
+ */
+export function reviewMerchantApplication(
+  applicationId: string,
+  decision: 'approved' | 'rejected',
+  reviewer?: string
+): MerchantApplication | { error: string } {
+  const application = merchantApplications.find((a) => a.id === applicationId);
+  if (!application) return { error: 'Application not found' };
+  if (application.status !== 'pending') {
+    return { error: 'Application already reviewed' };
+  }
+
+  application.status = decision;
+  application.reviewedAt = new Date().toISOString();
+  application.reviewedBy = reviewer;
+
+  if (decision === 'approved') {
+    const shopSlug =
+      application.shopName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '') || `merchant-${Date.now()}`;
+    merchants.push({
+      id: `mch-${Date.now()}`,
+      userId: application.userId ?? `usr-mch-${Date.now()}`,
+      shopName: application.shopName,
+      shopSlug,
+      contactEmail: application.contactEmail,
+      contactPhone: application.contactPhone,
+      description: application.businessDescription,
+      country: application.country,
+      city: application.city,
+      specialties: application.specialties,
+      website: application.website,
+      certification: 'verified',
+      commissionRate: 0.1,
+      settlementCurrency: 'USD',
+      balance: 0,
+      totalSales: 0,
+      totalOrders: 0,
+      rating: 0,
+      status: 'approved',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+  }
+
+  return application;
+}
+
+/**
+ * Admin: approve or reject a pending merchant withdrawal.
+ * Approving marks it completed with a synthetic tx hash; rejecting releases
+ * the held funds back to the merchant balance.
+ */
+export function reviewMerchantWithdrawal(
+  withdrawalId: string,
+  decision: 'approved' | 'rejected'
+): MerchantWithdrawal | { error: string } {
+  const withdrawal = merchantWithdrawals.find((w) => w.id === withdrawalId);
+  if (!withdrawal) return { error: 'Withdrawal not found' };
+  if (withdrawal.status !== 'pending') {
+    return { error: 'Withdrawal already reviewed' };
+  }
+
+  withdrawal.reviewedAt = new Date().toISOString();
+
+  if (decision === 'approved') {
+    withdrawal.status = 'completed';
+    withdrawal.txHash = `0x${Array.from({ length: 40 }, () =>
+      '0123456789abcdef'[Math.floor(Math.random() * 16)]
+    ).join('')}`;
+  } else {
+    withdrawal.status = 'rejected';
+    const merchant = merchants.find((m) => m.id === withdrawal.merchantId);
+    if (merchant) merchant.balance += withdrawal.amount;
+  }
+
+  return withdrawal;
 }

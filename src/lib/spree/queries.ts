@@ -17,7 +17,9 @@ export type SpreeProductResource = SpreeResource;
 export function listSpreeProducts(category?: string): SpreeProductResource[] {
   // Free community gifts (Blessing Pavilion) are gated promos — never listed
   // in the catalog, search, or featured slots. Slug access still works.
-  const catalog = products.filter((p) => !p.isFreeGift);
+  // Admin-deactivated products (isActive === false) are likewise hidden from
+  // listings while remaining reachable via their slug.
+  const catalog = products.filter((p) => !p.isFreeGift && p.isActive !== false);
   const filtered = category
     ? catalog.filter(
         (p) => p.category.toLowerCase() === category.toLowerCase()
