@@ -15,6 +15,7 @@ import {
   spreeGetShippingRates,
   spreeGetPaymentMethods,
   spreeAssociateCart,
+  spreeGetDefaultAddress,
   getSpreeCartToken,
   type SpreePaymentMethod,
 } from '@/lib/spree/client';
@@ -54,6 +55,30 @@ export function CheckoutClient() {
         if (!cancelled)
           setMethodsError('Could not load payment methods. Please refresh the page.');
       }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Prefill the address form from the buyer's saved default address (their
+  // most recent ship-to). Anonymous / first-time buyers start from a blank
+  // form. Only fills fields the buyer has not typed into yet.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const saved = await spreeGetDefaultAddress();
+      if (cancelled || !saved) return;
+      setForm((prev) => ({
+        fullName: prev.fullName || saved.fullName,
+        email: prev.email,
+        phone: prev.phone || saved.phone,
+        address: prev.address || saved.address,
+        city: prev.city || saved.city,
+        state: prev.state || saved.state,
+        zipCode: prev.zipCode || saved.zipCode,
+        country: prev.country || saved.country,
+      }));
     })();
     return () => {
       cancelled = true;

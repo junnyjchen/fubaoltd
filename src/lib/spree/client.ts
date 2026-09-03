@@ -349,6 +349,51 @@ export async function spreeAssociateCart(token: string): Promise<boolean> {
   }
 }
 
+/** Saved shipping address in the checkout form shape (email lives on the order, not the address). */
+export interface SpreeSavedAddress {
+  fullName: string;
+  phone: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+}
+
+/**
+ * GET /account/addresses — the user's default shipping address (derived from
+ * their most recent order, Spree default_address semantics). Used to prefill
+ * the checkout form. Returns null for anonymous users / no order history —
+ * never throws, prefill is best-effort.
+ */
+export async function spreeGetDefaultAddress(): Promise<SpreeSavedAddress | null> {
+  try {
+    const res = await fetch(`${API_BASE}/account/addresses`, {
+      headers: { Accept: 'application/vnd.api+json' },
+      credentials: 'same-origin',
+      cache: 'no-store',
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as JsonApiResponse;
+    const first = Array.isArray(json.data) ? json.data[0] : json.data;
+    const a = first?.attributes;
+    if (!a || !a.address1) return null;
+    const fullName = [a.firstname, a.lastname].filter(Boolean).join(' ').trim();
+    const street = [a.address1, a.address2].filter(Boolean).join(', ');
+    return {
+      fullName: fullName || '',
+      phone: String(a.phone ?? ''),
+      address: street,
+      city: String(a.city ?? ''),
+      state: String(a.state_name ?? ''),
+      zipCode: String(a.zipcode ?? ''),
+      country: String(a.country_iso ?? ''),
+    };
+  } catch {
+    return null;
+  }
+}
+
 /* ---------- Checkout state machine (Spree v2 contract) ---------- */
 
 export interface SpreeCheckoutAddress {
