@@ -400,6 +400,13 @@ export function AccountPageClient() {
             <span className="block font-medium">Free Blessing</span>
             <span className="text-xs text-muted-foreground">Claim your gift</span>
           </Link>
+          <Link
+            href="/wallet"
+            className="p-3 border border-border rounded-md text-sm text-foreground hover:bg-muted transition-colors text-left"
+          >
+            <span className="block font-medium">Crypto Wallet</span>
+            <span className="text-xs text-muted-foreground">Deposit & pay with USDT</span>
+          </Link>
           <button
             onClick={copyReferral}
             className="p-3 border border-border rounded-md text-sm text-foreground hover:bg-muted transition-colors text-left"

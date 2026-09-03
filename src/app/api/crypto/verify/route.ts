@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/session';
 import { validateTxHash } from '@/lib/crypto/validation';
-import { confirmPayment, getPaymentByOrder, updateWalletBalance } from '@/lib/crypto/payment-store';
+import { confirmPayment, completePayment, getPaymentByOrder, updateWalletBalance } from '@/lib/crypto/payment-store';
 import type { CryptoNetwork } from '@/lib/crypto/types';
 
 export async function POST(request: NextRequest) {
@@ -40,6 +40,21 @@ export async function POST(request: NextRequest) {
 
     // Confirm payment (in production, this would verify on-chain)
     const updated = confirmPayment(payment.id, txHash);
+
+    // Wallet top-up orders close the loop immediately: completing credits the balance
+    if (updated && orderId.startsWith('WALLET-')) {
+      const completed = completePayment(payment.id);
+      if (completed) {
+        updateWalletBalance(completed.userId, completed.token, completed.amount);
+        return NextResponse.json({
+          success: true,
+          data: {
+            ...completed,
+            message: 'Deposit confirmed. Your wallet balance has been updated.',
+          },
+        });
+      }
+    }
 
     return NextResponse.json({
       success: true,
