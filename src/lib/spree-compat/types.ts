@@ -101,6 +101,8 @@ export interface SpreeOrderState {
   promoTotal: number;
   adjustmentTotal: number;
   couponCode: string | null;
+  /** Guard so the coupon is counted as used only once per completed order. */
+  promoCounted?: boolean;
   createdAt: string;
   completedAt: string | null;
   paymentStatus: string;

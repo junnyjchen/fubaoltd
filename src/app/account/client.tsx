@@ -209,6 +209,12 @@ export function AccountPageClient() {
           </div>
           <div className="text-3xl font-bold text-foreground mt-2">{user.points}</div>
           <div className="text-sm text-muted-foreground">Points</div>
+          <Link
+            href="/rewards"
+            className="inline-block mt-3 text-xs underline decoration-gold/60 underline-offset-4 text-muted-foreground hover:text-foreground"
+          >
+            Redeem for coupons
+          </Link>
           {nextLevel && (
             <div className="mt-4">
               <div className="h-1.5 bg-muted rounded-full overflow-hidden">
@@ -413,6 +419,13 @@ export function AccountPageClient() {
           >
             <span className="block font-medium">Coupon Center</span>
             <span className="text-xs text-muted-foreground">Claim discount codes</span>
+          </Link>
+          <Link
+            href="/rewards"
+            className="p-3 border border-border rounded-md text-sm text-foreground hover:bg-muted transition-colors text-left"
+          >
+            <span className="block font-medium">Redeem Points</span>
+            <span className="text-xs text-muted-foreground">Points for coupons</span>
           </Link>
           <button
             onClick={copyReferral}

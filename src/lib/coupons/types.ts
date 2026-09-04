@@ -14,6 +14,8 @@ export interface Coupon {
   applicableCategories?: string[];
   applicableProducts?: string[];
   isActive: boolean;
+  /** Personal coupons (points-redemption mints) are excluded from the public catalog. */
+  isPersonal?: boolean;
   createdAt: string;
 }
 

@@ -10,7 +10,7 @@
  */
 
 import { products } from '@/lib/data/products';
-import { validateCoupon } from '@/lib/coupons/coupon-store';
+import { validateCoupon, useCoupon as markCouponUsed } from '@/lib/coupons/coupon-store';
 import type {
   SpreeAddressState,
   SpreeLineItemOptions,
@@ -390,6 +390,12 @@ export function completeOrder(order: SpreeOrderState): boolean {
   order.paymentTotal = orderTotal(order);
   order.paymentStatus = 'paid';
   order.shipmentStatus = 'ready';
+  // Mark the applied coupon used exactly once per order (increments
+  // usedCount + burns the user's claim so per-user limits stay honest).
+  if (order.couponCode && !order.promoCounted) {
+    markCouponUsed(order.couponCode, order.userId ?? '', order.number);
+    order.promoCounted = true;
+  }
   return true;
 }
 

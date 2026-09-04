@@ -9,6 +9,7 @@ export async function GET() {
     const now = Date.now();
     const isLive = (c: Coupon) =>
       c.isActive &&
+      !c.isPersonal &&
       (!c.validFrom || new Date(c.validFrom).getTime() <= now) &&
       (!c.validUntil || new Date(c.validUntil).getTime() >= now);
 

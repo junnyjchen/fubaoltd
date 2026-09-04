@@ -50,10 +50,11 @@ export function validateCoupon(code: string, orderAmount: number, userId?: strin
     return { valid: false, discount: 0, error: `Minimum order amount: $${coupon.minOrderAmount}` };
   }
 
-  // Check per-user limit
+  // Check per-user limit — count USED claims only (a claimed-but-unused coupon
+  // must still apply at checkout; useCoupon marks it used on order completion).
   if (userId) {
-    const userCouponList = userCoupons.get(userId)?.filter(uc => uc.couponId === coupon.id) || [];
-    if (userCouponList.length >= coupon.perUserLimit) {
+    const usedList = userCoupons.get(userId)?.filter(uc => uc.couponId === coupon.id && uc.usedAt) || [];
+    if (usedList.length >= coupon.perUserLimit) {
       return { valid: false, discount: 0, error: 'You have already used this coupon' };
     }
   }
