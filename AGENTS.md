@@ -18,7 +18,8 @@ FuBao is a Taoist talisman cultural e-commerce site targeting overseas markets. 
 ## Directory Structure
 
 ```
-├── public/                     # Static assets
+├── public/                     # Static assets (og-brand.png share card)
+├── src/lib/newsletter/         # Newsletter store (globalThis)
 ├── src/
 │   ├── app/                    # Pages (App Router)
 │   │   ├── layout.tsx          # Root layout (Header + Footer)
@@ -157,6 +158,7 @@ stores with real `SPREE_API_URL` calls later — routes keep the same contract.
 - **State persistence**: `order-store.ts` keeps in-memory Maps on `globalThis` so all routes share state across module instances in dev
 - **Users**: reuses `@/lib/auth/user-store` (demo@fubao.com / demo123); JWT issued by `@/lib/auth/jwt`
 
+- Newsletter (`components/layout/newsletter-form.tsx`): real subscription flow over `src/lib/newsletter/newsletter-store.ts` (globalThis, email-dedup). Public `POST /api/newsletter {email, source?}` → 201/200 with welcome message; duplicate email → 409 "This email is already subscribed"; invalid/missing email → 400. Form has full state machine (idle → submitting "Joining…" disabled → success/error note); source field tracks origin (footer). Admin `GET /api/admin/newsletter` (role admin) returns `{subscribers, stats {total, thisWeek, topSource}}`; console `/admin/newsletter` lists subscribers with source badges + stats cards. Nav entry wired across the 7 consoles that have navItems (blessing/ai-training/knowledge have no navItems by legacy design)
 - Error & 404 pages: `src/app/not-found.tsx` (branded "Page Not Found" — ink frame, cinnabar seal, Return Home / Browse Talismans CTAs, sets `title`) and `src/app/error.tsx` (client boundary: digest log + reset retry). Both match the paper/ink/cinnabar design language; unknown product/article slugs (via `notFound()`) and random paths all render the branded 404 with HTTP 404 status
 
 - Open Graph images: `public/og-brand.png` (2560x1440, brand card: xuan paper bg + cinnabar talisman + ink wordmark + vermillion seal). Root layout `metadata.openGraph` sets default `og:image`/`og:image:width/height`/`twitter:card: summary_large_image`; product + article detail pages inherit it via their own `openGraph` blocks (no per-item images yet — article `coverImage` seeds are empty). Combined with `metadataBase` (env domain) all shares render rich cards on X/Facebook/WhatsApp

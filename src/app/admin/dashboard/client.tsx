@@ -47,6 +47,7 @@ export function AdminDashboardClient() {
     { label: 'Free Blessing', href: '/admin/blessing' },
     { label: 'Merchants', href: '/admin/merchants' },
   { label: 'Wishes', href: '/admin/wishes' },
+  { label: 'Newsletter', href: '/admin/newsletter' },
   ];
 
   return (

@@ -16,6 +16,7 @@ const navItems = [
   { label: 'Free Blessing', href: '/admin/blessing' },
   { label: 'Merchants', href: '/admin/merchants' },
   { label: 'Wishes', href: '/admin/wishes' },
+  { label: 'Newsletter', href: '/admin/newsletter' },
 ];
 
 interface WinnerView {
