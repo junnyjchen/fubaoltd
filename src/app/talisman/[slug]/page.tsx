@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getProductBySlug, getProducts, getArtisanForProduct } from '@/lib/api';
 import { ProductDetailClient } from './client';
-import { reviews } from '@/lib/data/products';
+import { getReviewsForProduct } from '@/lib/reviews/review-store';
+import { ReviewForm } from '@/components/shared/review-form';
 import { Star, Truck, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { TalismanSVG, getTalismanVariant } from '@/components/shared/talisman-svg';
@@ -55,6 +56,16 @@ export default async function ProductDetailPage({ params }: Props) {
   if (!product) {
     notFound();
   }
+
+  const productReviews = getReviewsForProduct(product.slug);
+  const ratingSummary = {
+    count: productReviews.length,
+    average:
+      productReviews.length > 0
+        ? productReviews.reduce((sum, r) => sum + r.rating, 0) /
+          productReviews.length
+        : product.rating,
+  };
 
   const variant = getTalismanVariant(product.slug);
   const artisan = await getArtisanForProduct(slug);
@@ -121,7 +132,7 @@ export default async function ProductDetailPage({ params }: Props) {
                 ))}
               </div>
               <span className="text-xs text-smoke">
-                {product.rating} ({product.reviewCount} reviews)
+                {ratingSummary.average.toFixed(1)} ({ratingSummary.count} reviews)
               </span>
             </div>
 
@@ -231,8 +242,9 @@ export default async function ProductDetailPage({ params }: Props) {
             Reviews
           </h2>
           <div className="h-px w-12 bg-gold/30 mb-8" />
-          <div className="grid gap-6 md:grid-cols-2">
-            {getReviewsForProduct(product.slug).map((review) => (
+          <ReviewForm productSlug={product.slug} />
+          <div className="mt-8 grid gap-6 md:grid-cols-2">
+            {productReviews.map((review) => (
               <div key={review.id} className="border border-border p-6 transition-all duration-300 hover:shadow-sm">
                 <div className="mb-3 flex gap-0.5">
                   {Array.from({ length: 5 }).map((_, i) => (
@@ -250,7 +262,14 @@ export default async function ProductDetailPage({ params }: Props) {
                   &ldquo;{review.content}&rdquo;
                 </p>
                 <div className="mt-4 border-t border-border/50 pt-3">
-                  <p className="text-xs font-medium text-ink">{review.author}</p>
+                  <p className="text-xs font-medium text-ink">
+                    {review.author}
+                    {review.verifiedPurchase && (
+                      <span className="ml-2 inline-flex items-center gap-1 rounded-sm border border-gold/40 bg-jade px-1.5 py-0.5 text-[10px] font-normal text-gold">
+                        <ShieldCheck className="h-3 w-3" /> Verified Purchase
+                      </span>
+                    )}
+                  </p>
                   <p className="text-xs text-smoke">{review.date}</p>
                 </div>
               </div>
@@ -260,8 +279,4 @@ export default async function ProductDetailPage({ params }: Props) {
       </div>
     </div>
   );
-}
-
-function getReviewsForProduct(slug: string) {
-  return reviews.filter((r) => r.productSlug === slug);
 }

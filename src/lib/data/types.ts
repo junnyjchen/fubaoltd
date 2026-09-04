@@ -129,6 +129,7 @@ export interface Review {
   rating: number;
   content: string;
   date: string;
+  verifiedPurchase?: boolean;
 }
 
 // ─── Artisan (Vendor) Types ───
