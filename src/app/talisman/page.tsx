@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { getProducts, getTaxons } from '@/lib/api';
 import type { ProductCategory } from '@/lib/data/types';
 import { Star, SearchX } from 'lucide-react';
-import { TalismanSVG, getTalismanVariant } from '@/components/shared/talisman-svg';
+import { ProductImage } from '@/components/shared/product-image';
 import { RevealSection } from '@/components/shared/reveal-section';
 import { FavoriteButton } from '@/components/shared/favorite-button';
 import { SearchBox } from './search-box';
@@ -119,18 +119,18 @@ export default async function TalismanPage({ searchParams }: Props) {
         {/* Products Grid */}
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
           {products.map((product, i) => {
-            const variant = getTalismanVariant(product.slug);
-            return (
+                    return (
               <RevealSection key={product.slug} delay={i * 80}>
                 <Link
                   href={`/talisman/${product.slug}`}
                   className="group block"
                 >
                   <div className="relative aspect-[3/4] overflow-hidden bg-jade transition-all duration-500">
-                    <div className="flex h-full w-full items-center justify-center p-8 transition-transform duration-700 group-hover:scale-[1.03]">
-                      <TalismanSVG
-                        variant={variant}
-                        className="h-full w-auto max-w-[180px] opacity-80 transition-opacity duration-500 group-hover:opacity-100"
+                    <div className="transition-transform duration-700 group-hover:scale-[1.03]">
+                      <ProductImage
+                        slug={product.slug}
+                        imageKey={product.image_key}
+                        className="h-full w-full"
                       />
                     </div>
                     <FavoriteButton slug={product.slug} />

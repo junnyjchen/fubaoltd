@@ -42,7 +42,7 @@ interface ProductsData {
 
 const CATEGORIES = ['Protection', 'Home Blessing', 'Career', 'Gift Sets'];
 
-const emptyForm = { slug: '', name: '', price: '', category: 'Protection', tagline: '' };
+const emptyForm = { slug: '', name: '', price: '', category: 'Protection', tagline: '', imageKey: '' };
 
 export function AdminProductsClient() {
   const { user, isLoading } = useAuth();
@@ -72,6 +72,24 @@ export function AdminProductsClient() {
     if (!isLoading && !user) setError('Please sign in with an admin account');
   }, [isLoading, user, load]);
 
+  const uploadProductImage = async (file: File): Promise<string | null> => {
+    setWorking('upload');
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/upload', { method: 'POST', body: fd });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || 'Upload failed');
+      toast.success('Image uploaded');
+      return body.data.key as string;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Upload failed');
+      return null;
+    } finally {
+      setWorking('');
+    }
+  };
+
   const createProduct = async () => {
     setWorking('create');
     try {
@@ -84,6 +102,7 @@ export function AdminProductsClient() {
           price: Number(createForm.price),
           category: createForm.category,
           tagline: createForm.tagline,
+          imageKey: createForm.imageKey || undefined,
         }),
       });
       const body = await res.json();
@@ -286,6 +305,34 @@ export function AdminProductsClient() {
                 placeholder="Hand-drawn keepsake for inner calm"
                 className="w-full px-3 py-2 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-ring"
               />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Product Image (optional)</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  disabled={working === 'upload'}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) void uploadProductImage(file).then((key) => {
+                      if (key) setCreateForm((f) => ({ ...f, imageKey: key }));
+                    });
+                    e.target.value = '';
+                  }}
+                  className="w-full text-xs text-muted-foreground file:mr-2 file:px-2 file:py-1 file:text-xs file:border file:border-border file:rounded-md file:bg-background file:text-foreground cursor-pointer"
+                />
+                {createForm.imageKey && (
+                  <img
+                    src={`/api/images/${encodeURIComponent(createForm.imageKey)}`}
+                    alt="preview"
+                    className="w-10 h-10 object-cover rounded-md border border-border"
+                  />
+                )}
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                {createForm.imageKey || 'Without an image the storefront falls back to the hand-drawn talisman motif.'}
+              </p>
             </div>
           </div>
           <div className="flex gap-3 mt-4">

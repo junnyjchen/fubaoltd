@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getSession } from "@/lib/auth/session";
 import { S3Storage } from "coze-coding-dev-sdk";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +15,13 @@ const storage = new S3Storage({
 
 // POST /api/upload - Upload image to object storage
 export async function POST(request: NextRequest) {
+  // auth gate first: reject anonymous uploads BEFORE parsing the multipart
+  // body (bogus Content-Type on anon requests previously 500'd, not 401'd)
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ success: false, error: "Authentication required" }, { status: 401 });
+  }
+
   try {
     // Check if storage is configured
     const isStorageConfigured = process.env.COZE_BUCKET_ENDPOINT_URL && 

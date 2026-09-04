@@ -145,7 +145,9 @@ export const products: Product[] = (globalStore.__fubaoCatalog ??= seedProducts)
  */
 export function updateProductAdmin(
   slug: string,
-  updates: Partial<Pick<Product, 'price' | 'stock' | 'tagline' | 'isActive'>>
+  updates: Partial<
+    Pick<Product, 'price' | 'stock' | 'tagline' | 'isActive' | 'image_key'>
+  >
 ): Product | null {
   const product = products.find((p) => p.slug === slug);
   if (!product) return null;
@@ -159,7 +161,20 @@ export function updateProductAdmin(
   }
   if (updates.tagline !== undefined) product.tagline = updates.tagline;
   if (updates.isActive !== undefined) product.isActive = updates.isActive;
+  if (updates.image_key !== undefined) {
+    const key = String(updates.image_key).trim();
+    if (key && !isUploadedPhotoKey(key) && key !== `talisman-${slug}.jpg`) {
+      // Only uploaded keys (products/…) or the default seed pattern are valid
+      return null;
+    }
+    product.image_key = key || `talisman-${slug}.jpg`;
+  }
   return product;
+}
+
+/** Uploaded photos always come from the admin upload flow with this prefix. */
+export function isUploadedPhotoKey(key: string): boolean {
+  return key.startsWith('products/');
 }
 
 /**
@@ -174,6 +189,7 @@ export function createProductAdmin(input: {
   category: Product['category'];
   tagline: string;
   story?: string[];
+  imageKey?: string;
 }): Product | null {
   const slug = input.slug.trim().toLowerCase();
   if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(slug)) return null;
@@ -192,7 +208,9 @@ export function createProductAdmin(input: {
       input.story && input.story.length > 0
         ? input.story
         : [`${input.name.trim()} — a hand-drawn cultural keepsake from the FuBao collection. Each piece follows traditional Taoist consecration practices and ships with its verification card.`],
-    image_key: `talisman-${slug}.jpg`,
+    image_key: input.imageKey && isUploadedPhotoKey(input.imageKey.trim())
+      ? input.imageKey.trim()
+      : `talisman-${slug}.jpg`,
     ritual_info: {
       master: 'FuBao Atelier',
       location: 'Hong Kong',

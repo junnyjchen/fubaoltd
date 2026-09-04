@@ -6,7 +6,7 @@ import { getReviewsForProduct } from '@/lib/reviews/review-store';
 import { ReviewForm } from '@/components/shared/review-form';
 import { Star, Truck, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
-import { TalismanSVG, getTalismanVariant } from '@/components/shared/talisman-svg';
+import { ProductImage } from '@/components/shared/product-image';
 import { FavoriteButton } from '@/components/shared/favorite-button';
 import { TrackView } from '@/components/shared/track-view';
 import { ShareMenu } from '@/components/shared/share-menu';
@@ -67,7 +67,6 @@ export default async function ProductDetailPage({ params }: Props) {
         : product.rating,
   };
 
-  const variant = getTalismanVariant(product.slug);
   const artisan = await getArtisanForProduct(slug);
 
   return (
@@ -85,12 +84,11 @@ export default async function ProductDetailPage({ params }: Props) {
         <div className="grid gap-8 lg:grid-cols-2 lg:gap-16">
           {/* Image */}
           <div className="aspect-[3/4] overflow-hidden bg-jade">
-            <div className="flex h-full w-full items-center justify-center p-12">
-              <TalismanSVG
-                variant={variant}
-                className="h-full w-auto max-w-[260px] opacity-90"
-              />
-            </div>
+            <ProductImage
+              slug={product.slug}
+              imageKey={product.image_key}
+              className="h-full w-full"
+            />
           </div>
 
           {/* Info */}

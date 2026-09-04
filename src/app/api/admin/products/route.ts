@@ -126,7 +126,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Slug already exists' }, { status: 409 });
     }
 
-    const product = createProductAdmin({ slug, name, price, category: category as Product['category'], tagline });
+    const rawImageKey = body.imageKey === undefined || body.imageKey === null
+      ? ''
+      : String(body.imageKey).trim();
+    if (rawImageKey && !rawImageKey.startsWith('products/')) {
+      return NextResponse.json(
+        { success: false, error: 'imageKey must be an uploaded key (products/…) — use the upload control' },
+        { status: 400 }
+      );
+    }
+
+    const product = createProductAdmin({
+      slug,
+      name,
+      price,
+      category: category as Product['category'],
+      tagline,
+      imageKey: rawImageKey || undefined,
+    });
     if (!product) {
       return NextResponse.json({ success: false, error: 'Invalid product data' }, { status: 400 });
     }
@@ -157,7 +174,18 @@ export async function PUT(request: NextRequest) {
       stock?: number;
       tagline?: string;
       isActive?: boolean;
+      imageKey?: string;
     };
+    if (updates.imageKey !== undefined) {
+      const key = String(updates.imageKey).trim();
+      if (key && !key.startsWith('products/')) {
+        return NextResponse.json(
+          { success: false, error: 'imageKey must be an uploaded key (products/…)' },
+          { status: 400 }
+        );
+      }
+      (updates as { image_key?: string }).image_key = key || `talisman-${slug}.jpg`;
+    }
 
     if (!slug) {
       return NextResponse.json({ success: false, error: 'Product slug is required' }, { status: 400 });

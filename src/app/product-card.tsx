@@ -2,20 +2,20 @@
 
 import Link from 'next/link';
 import { Star } from 'lucide-react';
-import { TalismanSVG, getTalismanVariant } from '@/components/shared/talisman-svg';
+import { ProductImage } from '@/components/shared/product-image';
 import { RevealSection } from '@/components/shared/reveal-section';
 import type { Product } from '@/lib/data/types';
 
 export function ProductCard({ product, delay }: { product: Product; delay: number }) {
-  const variant = getTalismanVariant(product.slug);
   return (
     <RevealSection delay={delay}>
       <Link href={`/talisman/${product.slug}`} className="group block">
         <div className="aspect-[3/4] overflow-hidden bg-jade transition-all duration-500">
-          <div className="flex h-full w-full items-center justify-center p-8 transition-transform duration-700 group-hover:scale-[1.03]">
-            <TalismanSVG
-              variant={variant}
-              className="h-full w-auto max-w-[180px] opacity-80 transition-opacity duration-500 group-hover:opacity-100"
+          <div className="transition-transform duration-700 group-hover:scale-[1.03]">
+            <ProductImage
+              slug={product.slug}
+              imageKey={product.image_key}
+              className="h-full w-full"
             />
           </div>
         </div>
