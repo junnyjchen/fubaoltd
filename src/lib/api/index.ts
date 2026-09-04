@@ -24,89 +24,17 @@ export async function getGiveaways(): Promise<Giveaway[]> {
 
 // ============ Articles ============
 
-interface Article {
-  id: string;
-  slug: string;
-  title: string;
-  excerpt: string;
-  content: string;
-  category: "news" | "encyclopedia" | "tutorial" | "culture";
-  tags: string[];
-  author: string;
-  coverImage?: string;
-  published: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-// Mock articles for server-side rendering
-const mockArticles: Article[] = [
-  {
-    id: "art-001",
-    slug: "history-of-taoist-talismans",
-    title: "The Ancient History of Taoist Talismans",
-    excerpt: "Explore the 2000-year tradition of Taoist talisman creation and its significance in Chinese spiritual culture.",
-    content: "# The Ancient History of Taoist Talismans\n\nTaoist talismans, known as \"Fu\" (符) in Chinese, represent one of the most fascinating aspects of Eastern spiritual tradition.",
-    category: "encyclopedia",
-    tags: ["history", "talisman", "culture"],
-    author: "Master Chen",
-    published: true,
-    createdAt: "2025-01-15T10:00:00Z",
-    updatedAt: "2025-01-15T10:00:00Z",
-  },
-  {
-    id: "art-002",
-    slug: "five-elements-guide",
-    title: "Understanding the Five Elements (Wu Xing)",
-    excerpt: "A comprehensive guide to Metal, Wood, Water, Fire, and Earth—the fundamental forces in Taoist philosophy.",
-    content: "# Understanding the Five Elements (Wu Xing)\n\nThe Five Elements theory is a fundamental concept in Taoist philosophy.",
-    category: "encyclopedia",
-    tags: ["five elements", "wu xing", "philosophy"],
-    author: "Master Chen",
-    published: true,
-    createdAt: "2025-01-20T14:00:00Z",
-    updatedAt: "2025-01-20T14:00:00Z",
-  },
-  {
-    id: "art-003",
-    slug: "consecration-ritual-explained",
-    title: "The Consecration Ritual: A Step-by-Step Guide",
-    excerpt: "Learn about the sacred seven-step process that transforms a hand-drawn talisman into a blessed cultural artifact.",
-    content: "# The Consecration Ritual\n\nEvery FuBao talisman undergoes a traditional seven-step consecration ritual.",
-    category: "tutorial",
-    tags: ["ritual", "consecration", "process"],
-    author: "Master Chen",
-    published: true,
-    createdAt: "2025-02-01T09:00:00Z",
-    updatedAt: "2025-02-01T09:00:00Z",
-  },
-  {
-    id: "art-004",
-    slug: "new-spring-collection-2025",
-    title: "Spring 2025 Collection: Renewal and Growth",
-    excerpt: "Introducing our new Wood element talismans, designed for the season of renewal and fresh beginnings.",
-    content: "# Spring 2025 Collection\n\nAs spring approaches, we're excited to introduce our seasonal collection.",
-    category: "news",
-    tags: ["spring", "collection", "wood element"],
-    author: "FuBao Team",
-    published: true,
-    createdAt: "2025-02-10T11:00:00Z",
-    updatedAt: "2025-02-10T11:00:00Z",
-  },
-];
+export type { Article } from "@/lib/articles/article-store";
+import type { Article } from "@/lib/articles/article-store";
+import { listArticles, getArticleBySlug as getArticleBySlugFromStore } from "@/lib/articles/article-store";
 
 export async function getArticles(category?: string): Promise<Article[]> {
-  let filtered = mockArticles.filter((a) => a.published);
-  if (category) {
-    filtered = filtered.filter((a) => a.category === category);
-  }
-  return filtered.sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+  return listArticles({ category, publishedOnly: true });
 }
 
 export async function getArticleBySlug(slug: string): Promise<Article | null> {
-  return mockArticles.find((a) => a.slug === slug && a.published) || null;
+  const article = getArticleBySlugFromStore(slug);
+  return article && article.published ? article : null;
 }
 
 // ============ Wishes ============
