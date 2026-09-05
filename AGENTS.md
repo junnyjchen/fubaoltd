@@ -247,6 +247,8 @@ Full deployment guide lives in `宝塔部署教程.md`. Key invariants for any s
 - Nginx reverse proxy needs `proxy_buffering off` for the AI chat SSE stream (`/api/ai/chat` does not set `X-Accel-Buffering`)
 - `/api/ai/*`, `/api/upload`, `/api/knowledge/*` depend on sandbox-injected Coze credentials — unavailable on self-hosted servers (expected); set `SPREE_API_URL` to swap the in-memory data layer for a real Spree 5.4 backend
 
+**One-click deploy**: `deploy/install.sh --domain www.fubao.ltd` (installs Node 24/pnpm/PM2/Nginx if missing, clones to `/www/wwwroot/fubao`, generates `deploy/fubao.env` with a strong random JWT_SECRET — gitignored, never overwrite, builds, starts PM2 process `fubao`, writes the BT Nginx vhost `fubao.conf` proxying :80 → 127.0.0.1:5000, attaches BT-issued SSL if present) and `deploy/update.sh` (pull → build → health-check `/api/blessing` → reload; failed health check stops PM2 and prints `git reflog` rollback instead of serving a broken build). Production domain is `www.fubao.ltd`; repo `github.com/junnyjchen/fubaoltd`
+
 ## Extension Points
 
 - Point `SPREE_API_URL` at a real Spree 5.4 instance — routes and frontend switch over without code changes
