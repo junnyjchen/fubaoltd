@@ -8,6 +8,7 @@
 #   bash deploy/install.sh --dir /www/wwwroot/fubao --port 5000
 #   REPO_URL=git@github.com:you/fubao.git bash deploy/install.sh   # env 覆盖
 #
+# 仓库已公开（public）时：无需任何认证，直接运行即可。
 # 私有仓库认证（GitHub 已不支持账号密码，详见 git_auth_help 输出）:
 #   方式 A：REPO_URL=git@github.com:junnyjchen/fubaoltd.git \
 #           DEPLOY_KEY=/root/fubao_deploy_key bash deploy/install.sh
