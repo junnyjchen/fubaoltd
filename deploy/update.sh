@@ -33,6 +33,37 @@ cleanup_canary() {
 }
 trap cleanup_canary EXIT
 
+# ----------------------------- 0. Git 认证（免交互） ---------------------------
+# 私有仓库 fetch/pull 需要认证（GitHub 已不支持账号密码）。
+# 认证来源优先级：环境变量 > deploy/fubao.env 中的 GITHUB_TOKEN > 仓库内 deploy/deploy_key。
+# GIT_TERMINAL_PROMPT=0 保证无人值守时认证缺失立刻失败，而不是卡住等输入。
+DEPLOY_KEY="${DEPLOY_KEY:-}"
+GITHUB_TOKEN="${GITHUB_TOKEN:-}"
+_ENV_EARLY="$APP_DIR/$ENV_FILE_REL"
+if [[ -z "$GITHUB_TOKEN" && -f "$_ENV_EARLY" ]]; then
+  GITHUB_TOKEN="$(grep -E '^GITHUB_TOKEN=' "$_ENV_EARLY" | tail -1 | cut -d= -f2-)"
+  GITHUB_TOKEN="${GITHUB_TOKEN//\"/}"
+  GITHUB_TOKEN="${GITHUB_TOKEN//\'/}"
+fi
+[[ -z "$DEPLOY_KEY" && -f "$APP_DIR/deploy/deploy_key" ]] && DEPLOY_KEY="$APP_DIR/deploy/deploy_key"
+
+export GIT_TERMINAL_PROMPT=0
+if [[ -n "$DEPLOY_KEY" ]]; then
+  chmod 600 "$DEPLOY_KEY" 2>/dev/null || true
+  export GIT_SSH_COMMAND="ssh -i '$DEPLOY_KEY' -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+  c_ok "Git 认证：SSH deploy key（$DEPLOY_KEY）"
+fi
+
+git_authed() {
+  if [[ -n "$GITHUB_TOKEN" ]]; then
+    git -c credential.helper= \
+        -c "credential.helper=!f() { echo username=x-access-token; echo password=$GITHUB_TOKEN; }; f" \
+        "$@"
+  else
+    git "$@"
+  fi
+}
+
 # ----------------------------- 1. 工作区检查 ----------------------------------
 if [[ -n "$(git status --porcelain)" ]]; then
   c_warn "工作区有未提交改动，为避免冲突中止更新："
@@ -41,9 +72,12 @@ if [[ -n "$(git status --porcelain)" ]]; then
 fi
 
 # ----------------------------- 2. 拉取代码 ------------------------------------
-git fetch --all --prune >/dev/null 2>&1
+git_authed fetch --all --prune >/dev/null 2>&1 \
+  || { c_err "git fetch 失败 —— 若仓库为私有，请配置认证（install.sh 传 --token/--deploy-key，"
+             "或把 GITHUB_TOKEN 写入 deploy/fubao.env，或在 $APP_DIR/deploy/ 放 deploy_key 私钥）"; exit 1; }
 OLD_REV="$(git rev-parse HEAD)"
-git pull --ff-only >/dev/null 2>&1 || die "git pull 失败（可能存在分叉），请手工处理后再试"
+git_authed pull --ff-only >/dev/null 2>&1 \
+  || die "git pull 失败（可能存在分叉），请手工处理后再试"
 NEW_REV="$(git rev-parse HEAD)"
 
 if [[ "$OLD_REV" == "$NEW_REV" && "$FORCE" -eq 0 ]]; then

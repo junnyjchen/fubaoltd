@@ -8,6 +8,12 @@
 #   bash deploy/install.sh --dir /www/wwwroot/fubao --port 5000
 #   REPO_URL=git@github.com:you/fubao.git bash deploy/install.sh   # env 覆盖
 #
+# 私有仓库认证（GitHub 已不支持账号密码，详见 git_auth_help 输出）:
+#   方式 A：REPO_URL=git@github.com:junnyjchen/fubaoltd.git \
+#           DEPLOY_KEY=/root/fubao_deploy_key bash deploy/install.sh
+#   方式 B：GITHUB_TOKEN=github_pat_xxx bash deploy/install.sh
+#           （token 会持久化到 deploy/fubao.env，后续 update.sh 免密拉取）
+#
 # 幂等：目录 / env / 证书已存在则保留；Nginx 配置每次重写（可安全重跑）。
 #
 # 流程：环境检查 → 克隆仓库 → 生成 env（随机 JWT_SECRET）→ 构建
@@ -33,6 +39,8 @@ while [[ $# -gt 0 ]]; do
     --dir)    APP_DIR="${2:-}"; shift 2 ;;
     --port)   PORT="${2:-}"; shift 2 ;;
     --name)   PM2_NAME="${2:-}"; shift 2 ;;
+    --deploy-key) DEPLOY_KEY="${2:-}"; shift 2 ;;   # SSH 私钥路径（私有仓库免密）
+    --token)  GITHUB_TOKEN="${2:-}"; shift 2 ;;     # GitHub PAT（私有仓库 HTTPS 免密）
     -h|--help)
       sed -n '3,12p' "$0"; exit 0 ;;
     *) echo "未知参数：$1（--help 查看用法）" >&2; exit 1 ;;
@@ -42,6 +50,48 @@ done
 # 后续重跑时 env 文件中的值优先生效（改端口请直接编辑 env 文件）。
 REPO_URL="${REPO_URL:-https://github.com/junnyjchen/fubaoltd.git}"
 BRANCH="${BRANCH:-main}"
+
+# ----------------------------- Git 认证（免交互） ------------------------------
+# 私有仓库 clone/pull 需要认证。GitHub 自 2021-08 起不再接受账号密码，
+# 只认 Personal Access Token 或 SSH key。此处把认证显式注入，并禁止
+# 交互式提示 —— 无人值守运行时认证缺失会立刻失败，而不是卡住等输入。
+DEPLOY_KEY="${DEPLOY_KEY:-}"
+GITHUB_TOKEN="${GITHUB_TOKEN:-}"
+export GIT_TERMINAL_PROMPT=0
+if [[ "$REPO_URL" == git@* || "$REPO_URL" == ssh://* ]] && [[ -n "$DEPLOY_KEY" ]]; then
+  [[ -f "$DEPLOY_KEY" ]] || die "DEPLOY_KEY 私钥文件不存在：$DEPLOY_KEY"
+  chmod 600 "$DEPLOY_KEY" 2>/dev/null || true
+  export GIT_SSH_COMMAND="ssh -i '$DEPLOY_KEY' -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+  c_ok "Git 认证：SSH deploy key（$DEPLOY_KEY）"
+fi
+
+git_authed() {
+  if [[ -n "$GITHUB_TOKEN" ]]; then
+    # token 经 credential helper 注入：不写入 .git/config，不留在 remote URL
+    git -c credential.helper= \
+        -c "credential.helper=!f() { echo username=x-access-token; echo password=$GITHUB_TOKEN; }; f" \
+        "$@"
+  else
+    git "$@"
+  fi
+}
+
+git_auth_help() {
+  c_err ""
+  c_err "克隆/拉取失败。若仓库为私有，需要认证（GitHub 已不支持账号密码）："
+  c_err ""
+  c_err "方式 A（推荐，只读部署钥，一次配置永久免密）："
+  c_err "  1) ssh-keygen -t ed25519 -C fubao-deploy -f /root/fubao_deploy_key -N ''"
+  c_err "  2) cat /root/fubao_deploy_key.pub"
+  c_err "  3) GitHub 仓库 → Settings → Deploy keys → Add deploy key（粘贴公钥，不勾 write）"
+  c_err "  4) 重跑：REPO_URL=git@github.com:junnyjchen/fubaoltd.git"
+  c_err "          DEPLOY_KEY=/root/fubao_deploy_key bash deploy/install.sh"
+  c_err ""
+  c_err "方式 B（Personal Access Token）："
+  c_err "  1) GitHub → Settings → Developer settings → Personal access tokens →"
+  c_err "     Fine-grained tokens → Generate（仓库选 fubaoltd，权限 Contents: Read-only）"
+  c_err "  2) 重跑：GITHUB_TOKEN=github_pat_xxx bash deploy/install.sh"
+}
 
 # apex 域名 = 去掉 www. 前缀
 APEX_DOMAIN="$DOMAIN"
@@ -92,7 +142,7 @@ c_ok "pnpm $(pnpm -v) / pm2 $(pm2 -v)"
 # ----------------------------- 3. 获取代码 ------------------------------------
 if [[ -d "$APP_DIR/.git" ]]; then
   c_info "目录已存在，复用：$APP_DIR"
-  git -C "$APP_DIR" fetch --all --prune >/dev/null 2>&1 || true
+  git_authed -C "$APP_DIR" fetch --all --prune >/dev/null 2>&1 || true
   current_branch="$(git -C "$APP_DIR" rev-parse --abbrev-ref HEAD)"
   if [[ "$current_branch" != "$BRANCH" ]]; then
     c_warn "当前分支 $current_branch != $BRANCH，不自动切换，按现状部署。"
@@ -100,7 +150,11 @@ if [[ -d "$APP_DIR/.git" ]]; then
 else
   c_info "克隆仓库：$REPO_URL → $APP_DIR"
   mkdir -p "$(dirname "$APP_DIR")"
-  git clone -b "$BRANCH" "$REPO_URL" "$APP_DIR"
+  if ! git_authed clone -b "$BRANCH" "$REPO_URL" "$APP_DIR"; then
+    rm -rf "$APP_DIR"
+    git_auth_help
+    die "认证失败或仓库不存在（REPO_URL=$REPO_URL）"
+  fi
 fi
 cd "$APP_DIR"
 
@@ -135,6 +189,13 @@ JWT_SECRET=$jwt_secret
 EOF
   chmod 600 "$ENV_FILE"
   c_ok "JWT_SECRET 已随机生成（openssl rand -hex 32）"
+fi
+
+# 提供过 GITHUB_TOKEN 时持久化到 env（update.sh 拉取时复用，避免再次传入）
+if [[ -n "$GITHUB_TOKEN" ]] && ! grep -qE '^GITHUB_TOKEN=' "$ENV_FILE"; then
+  printf 'GITHUB_TOKEN=%s\n' "$GITHUB_TOKEN" >> "$ENV_FILE"
+  chmod 600 "$ENV_FILE"
+  c_ok "GITHUB_TOKEN 已写入 $ENV_FILE_REL（update.sh 拉取时自动复用）"
 fi
 
 set -a
