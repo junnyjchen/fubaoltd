@@ -16,6 +16,8 @@
 #           （token 会持久化到 deploy/fubao.env，后续 update.sh 免密拉取）
 #
 # 幂等：目录 / env / 证书已存在则保留；Nginx 配置每次重写（可安全重跑）。
+#       复用已有目录时自动 ff-only 拉取最新代码（分支匹配且工作区干净时；
+#       有本地改动则跳过并提示），重跑 install.sh 即可把站点升到最新版。
 #
 # 流程：环境检查 → 克隆仓库 → 生成 env（随机 JWT_SECRET）→ 构建
 #       → PM2 守护（单实例）→ Nginx 反代（www + apex 301）→ 健康检查
@@ -147,6 +149,13 @@ if [[ -d "$APP_DIR/.git" ]]; then
   current_branch="$(git -C "$APP_DIR" rev-parse --abbrev-ref HEAD)"
   if [[ "$current_branch" != "$BRANCH" ]]; then
     c_warn "当前分支 $current_branch != $BRANCH，不自动切换，按现状部署。"
+  elif [[ -n "$(git -C "$APP_DIR" status --porcelain)" ]]; then
+    c_warn "工作区有本地改动，跳过自动拉取（如需同步最新代码：git checkout -- . 后重跑）。"
+  elif git_authed -C "$APP_DIR" pull --ff-only >/dev/null 2>&1; then
+    c_ok "代码已同步最新：$BRANCH @ $(git -C "$APP_DIR" rev-parse --short HEAD)"
+  else
+    c_warn "git pull 失败（认证或网络），按服务器现有代码继续部署。"
+    c_warn "私有仓库需认证：重跑时传 --token 或 --deploy-key（详见 git_auth_help 输出）。"
   fi
 else
   c_info "克隆仓库：$REPO_URL → $APP_DIR"
