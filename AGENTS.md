@@ -136,6 +136,63 @@ FuBao is a Taoist talisman cultural e-commerce site targeting overseas markets. 
 - **API Layer**: `src/lib/api/index.ts` — data access facade; product reads route through `@/lib/spree/queries` (Spree contract layer)
 - **Rule**: Pages import from `@/lib/api`, never directly from mock files
 
+## Supabase persistence (生产后端) — CORE
+
+FuBao is wired to a real Postgres (Coze-managed Supabase) for durable state that must
+survive restarts / multiple instances. In-memory `globalThis` stores remain the default
+for transient/seed data; high-value verticals are migrated to Postgres incrementally.
+
+- **Schema (single source)**: `src/storage/database/shared/schema.ts` (Drizzle). After ANY
+  edit run `coze-coding-ai db generate-models` (pull remote, overwrites) FIRST, then edit,
+  then `coze-coding-ai db upgrade` (pushes DDL). Never hand-write DDL queries — Drizzle is
+  schema-definition only; all CRUD uses the Supabase SDK (`client.from(...)`).
+- **Client template**: `src/storage/database/supabase-client.ts` (copied from skill).
+  `getSupabaseClient(token?)`: with token → anon_key+RLS; without → service_role_key
+  (bypasses RLS). **Backend uses `getSupabaseClient()` (no token, service_role).**
+- **RLS** (scenario A): every new table is `ALTER TABLE ... ENABLE ROW LEVEL SECURITY;`
+  with **NO policies** — anon/authenticated roles are locked out (`select → []`); the
+  backend reaches rows exclusively via service_role. Verified: anon `select` returns empty.
+- **CRUD pitfalls (from skill database.md) — MUST follow**: check `{data,error}` and throw
+  on error (never ignore); prefer `.maybeSingle()`; `.eq(col, null)` needs `.is()`; `.neq()`
+  misses NULL; guard `.in('id', [])` (empty array strips filters → full-table op!); every
+  `.delete()`/`.update()` must have a filter; default limit 1000 (paginate); use snake_case
+  column names in `.from('users').select(...)`; NEVER `.ilike` search (use tsvector/GIN);
+  don't pass a DB-generic to `createClient<Database>()` (no generated types yet) — type via
+  `as` assertions; PostgREST nested needs `.references()`; watch codes PGRST116/200,
+  23505 (dupe), 42501 (RLS), 42P01 (relation).
+
+### Delivered vertical — users (accounts/auth/persistence)
+`src/lib/auth/user-store.ts` is now **Postgres-backed**; exported signatures are IDENTICAL to
+the old in-memory store so all 17 importing modules (register/login/me, spree account-auth,
+check-in/points/rewards, favorites/history, distribution/order-commission, merchants,
+admin/blessing, giveaways, reviews, spree_oauth) work unchanged. Auth stays self-hosted
+(email/password, SHA-256, JWT + httpOnly session cookie) — **Supabase Auth is NOT used**.
+- `users` table: id(varchar36 PK, app-generated `usr-*`), email(nq unique, idx), name, role,
+  status, email_verified, avatar/phone/country, points(int), level, referral_code(idx),
+  referred_by, wallet_balance(numeric) / wallet_currency, password_hash(text nq),
+  created_at/updated_at(timestamptz). Indexes: `users_email_idx`(uniq), `users_referral_code_idx`,
+  `users_role_idx`.
+- Seed: on empty table, `seedIfNeeded()` inserts demo/demo / admin/admin123 /
+  merchant/merchant123 / craftsman/craft123 (best-effort guard so build/prerender never
+  crashes; CRUD functions still THROW real DB errors — no mock fallback).
+- map: snake_case→camelCase via `rowToUser`/`toColumnSet`; `update()`/`delete()` always have
+  `.eq('id', ...)`; reads use `.maybeSingle()`.
+
+### 上线生产环境接线 (VPS)
+The DB is Coze-injected in the sandbox (`COZE_SUPABASE_URL` / `_ANON_KEY` /
+`_SERVICE_ROLE_KEY`). On the self-hosted VPS (`deploy/fubao.env`) the operator MUST also
+export these three vars pointing at the chosen Supabase instance, else `getSupabaseClient()`
+throws at first use. Add to `deploy/fubao.env`:
+`COZE_SUPABASE_URL=...`, `COZE_SUPABASE_ANON_KEY=...`, `COZE_SUPABASE_SERVICE_ROLE_KEY=...`.
+(They are gitignored like the rest of fubao.env; never hardcode in source.)
+
+### 迁移路线图（后续分批）
+1. orders/coupons（电商交易主链路，order-store/coupon-store 语义迁移）
+2. products/admin CRUD、reviews、notifications、wishes、newsletter (admin-visible, need durable)
+3. wallet/crypto payments、giveaways quota、distribution commissions（含幂等/配额一致性）
+4. blessing claims、ai knowledge RAG 向量（可留对象存储/knowledge 技能）
+Each: 建表→upgrade→RLS→改 store（保持签名）→运行接口透传 + ts-check 验证。
+
 ## Frontend Spree Integration (src/lib/spree/)
 
 The frontend runs on the Spree v2 contract end-to-end:
